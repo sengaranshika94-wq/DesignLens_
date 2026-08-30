@@ -174,25 +174,5 @@ function Toggle({ defaultOn = false }) {
     </button>
   );
 }
-  const [on, setOn] = useState(defaultOn);
-  return (
-    <button
-      onClick={() => setOn(!on)}
-      className={cn(
-        'relative h-6 w-11 shrink-0 rounded-full transition-colors',
-        on ? 'bg-primary' : 'bg-muted'
-      )}
-      role="switch"
-      aria-checked={on}
-    >
-      <motion.div
-        layout
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className={cn(
-          'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm',
-          on ? 'left-[22px]' : 'left-0.5'
-        )}
-      />
-    </button>
-  );
+  
 

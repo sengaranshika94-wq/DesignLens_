@@ -33,12 +33,18 @@ export default function AnalyzePage() {
           <Logo />
           <nav className="hidden items-center gap-1 sm:flex">
             <button className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
-              <ScanLine className="h-4 w-4" /> Dashboard
+              <ScanLine className="h-4 w-4" /> Analyze
             </button>
-            <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <button 
+              onClick={() => navigate('/history')}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
               <Clock className="h-4 w-4" /> History
             </button>
-            <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <button 
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
               <Settings className="h-4 w-4" /> Settings
             </button>
           </nav>
