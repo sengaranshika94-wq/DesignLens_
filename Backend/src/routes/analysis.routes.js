@@ -9,5 +9,12 @@ router.post(
     authMiddleware,
     analysisController.analyzeDesignController
 )
-
+router.get("/:id",
+    authMiddleware,
+    analysisController.getAnalysis   
+)
+router.get("/design/:designId",
+    authMiddleware,
+    analysisController.getDesignAnalyses
+)
 module.exports = router

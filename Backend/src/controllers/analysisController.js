@@ -1,6 +1,8 @@
 const designModel = require("../models/designModel")
 const { analyzeDesign } = require("../services/ai.service")
 const analysisModel = require("../models/analysisModel")
+
+// Analyzes a specific design using Gemini and saves the AI-generated analysis in MongoDB.
 async function analyzeDesignController(req, res) {
     try {
 
@@ -80,6 +82,76 @@ async function analyzeDesignController(req, res) {
     }
 }
 
+// Fetches one saved analysis by its ID and makes sure it belongs to the logged-in user.
+async function getAnalysis(req, res) {
+    try {
+
+        const analysis = await analysisModel.findById(req.params.id)
+            .populate("design") //Find this analysis and also fetch the Design document that this analysis belongs to 
+
+        if (!analysis) {
+            return res.status(404).json({
+                message: "Analysis not found"
+            })
+        }
+
+        // Make sure this analysis belongs to the logged-in user
+        if (analysis.design.user.toString() !== req.user.id){ // Check whether that Design belongs to the currently logged-in user.
+            return res.status(403).json({
+                message: "Access denied"
+            })
+        }
+
+        return res.status(200).json({
+            message: "Analysis fetched successfully",
+            analysis
+        })
+
+    } catch (err) {
+        console.error("GET ANALYSIS ERROR:", err)
+
+        return res.status(500).json({
+            message: "Failed to fetch analysis"
+        })
+    }
+}
+
+// Fetches all analyses belonging to a specific design, with the newest analysis first
+async function getDesignAnalyses(req, res) {
+    try {
+
+        const design = await designModel.findOne({
+            _id: req.params.designId,
+            user: req.user.id
+        })
+
+        if (!design) {
+            return res.status(404).json({
+                message: "Design not found"
+            })
+        }
+
+       // Find all analyses that belong to this particular Design, and show the newest analysis first.
+        const analyses = await analysisModel.find({
+            design: design._id
+        }).sort({ createdAt: -1 })
+
+        return res.status(200).json({
+            message: "Analyses fetched successfully",
+            analyses
+        })
+
+    } catch (err) {
+        console.error("GET DESIGN ANALYSES ERROR:", err)
+
+        return res.status(500).json({
+            message: "Failed to fetch analyses"
+        })
+    }
+}
+
 module.exports = {
-    analyzeDesignController
+    analyzeDesignController,
+    getAnalysis,
+    getDesignAnalyses
 }
