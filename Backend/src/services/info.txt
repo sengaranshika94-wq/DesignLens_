@@ -1,0 +1,19 @@
+generateContent()
+      ↓
+"Send something to Gemini and generate an answer"
+
+contents
+      ↓
+"What am I sending?"
+
+inlineData
+      ↓
+"Here is my image"
+
+text
+      ↓
+"Here are my instructions"
+
+response.text
+      ↓
+"Here is Gemini's answer"

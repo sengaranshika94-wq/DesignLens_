@@ -1,4 +1,4 @@
-const mongoose = requie("mongoose")
+const mongoose = require("mongoose")
 const analysisSchema = new mongoose.Schema({
     design: {
         type: mongoose.Schema.Types.ObjectId,
