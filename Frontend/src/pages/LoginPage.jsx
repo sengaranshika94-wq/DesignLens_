@@ -10,10 +10,12 @@ import {
 } from 'lucide-react';
 
 import Button from '@/components/ui/Button';
-import { loginUser } from '@/services/authService';
+import { loginUser, getUser } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -23,42 +25,36 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    setError('');
+  setError('');
+  setLoading(true);
 
-    const cleanIdentifier = identifier.trim();
+  try {
+    await loginUser({
+      identifier: identifier.trim(),
+      password,
+    });
 
-    if (!cleanIdentifier) {
-      setError('Please enter your email or username.');
-      return;
-    }
+    // Login created the JWT cookie on the backend.
+    // Fetch the logged-in user and update React auth state.
+    const data = await getUser();
 
-    if (!password) {
-      setError('Please enter your password.');
-      return;
-    }
+    setUser(data.user);
 
-    setLoading(true);
+    navigate('/dashboard', { replace: true });
+  } catch (err) {
+    console.error('LOGIN ERROR:', err);
 
-    try {
-      await loginUser({
-        identifier: cleanIdentifier,
-        password,
-      });
-
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('LOGIN ERROR:', err);
-
-      setError(
-        err.response?.data?.message ||
-          'Unable to sign in. Please check your credentials and try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setError(
+      err.response?.data?.message ||
+        err.message ||
+        'Unable to sign in. Please check your credentials and try again.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 sm:px-6">

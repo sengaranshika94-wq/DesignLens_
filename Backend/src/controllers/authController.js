@@ -2,40 +2,47 @@ const userModel = require("../models/userModel")
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const redis = require('../config/cache')
-async function registerController(req,res){
-    const {username,email,password}= req.body
-    const isUserExist = await userModel.findOne({
-        $or:[{email},{username}]
-    })
-    if(isUserExist){
-        return res.status(409).json({
-            message:"user already exist"
-        })
-    }
-    const hash =await bcrypt.hash(password,10)
-    const user = await userModel.create({
-        username,
-        email,
-        password:hash
-    })
-    const token=jwt.sign({
-        id:user._id
-    },process.env.JWT_SECRET,{expiresIn:'3d'})
-    res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax"
-    })
-    return res.status(201).json({
-        user:{
-            id:user._id,
-            username:user.username,
-            email:user.email,
+async function registerController(req, res) {
+    try {
+        const { username, email, password } = req.body;
 
+        const isUserExist = await userModel.findOne({
+            $or: [
+                { email },
+                { username }
+            ]
+        });
+
+        if (isUserExist) {
+            return res.status(409).json({
+                message: "user already exist"
+            });
         }
-    })
 
+        const hash = await bcrypt.hash(password, 10);
 
+        const user = await userModel.create({
+            username,
+            email,
+            password: hash
+        });
+
+        return res.status(201).json({
+            message: "user registered successfully",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        console.error("REGISTER ERROR:", error);
+
+        return res.status(500).json({
+            message: "failed to register user"
+        });
+    }
 }
 
 async function loginController(req,res){
