@@ -74,8 +74,8 @@ async function loginController(req,res){
 
     res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax"
+    secure: true,
+    sameSite: "none"
     })
     return res.status(200).json({
         message:"user logged in successfully ",
@@ -92,8 +92,8 @@ async function logoutController(req,res){
     
     res.clearCookie("token", {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax"
+    secure: true,
+    sameSite: "none"
     })
      if (token) {
         await redis.set(token, "blacklisted", "EX", 3600)

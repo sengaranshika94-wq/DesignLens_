@@ -1,6 +1,6 @@
 import axios from 'axios'
 const api = axios.create({
-    baseURL:'http://localhost:3000/api',
+    baseURL:'https://designlens-bf97.onrender.com/api',
     withCredentials:true
 })
 
