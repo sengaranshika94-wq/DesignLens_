@@ -4,9 +4,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
-
 import { motion } from 'framer-motion';
-
 import {
   ArrowLeft,
   Download,
@@ -23,6 +21,7 @@ import {
   Type,
   Eye,
   Ruler,
+  Check,
 } from 'lucide-react';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -35,7 +34,6 @@ import WebsitePreview from '@/components/WebsitePreview';
 
 import { getAnalysis } from '@/services/analysisService';
 import { formatDate } from '@/lib/utils';
-
 import { analysisResult } from '@/data/mockData';
 
 const iconMap = {
@@ -47,7 +45,40 @@ const iconMap = {
   Ruler,
 };
 
-const sectionConfig = {
+/* =========================================================
+   REAL ANALYSIS SECTIONS
+========================================================= */
+
+const realSectionConfig = {
+  needsAttention: {
+    title: 'Needs Attention',
+    icon: AlertTriangle,
+    color: 'text-destructive',
+    bg: 'bg-destructive/10',
+  },
+
+  improvements: {
+    title: 'Improvements',
+    icon: Lightbulb,
+    color: 'text-warning',
+    bg: 'bg-warning/10',
+  },
+
+  minorIssues: {
+    title: 'Minor Issues',
+    icon: Lightbulb,
+    color: 'text-muted-foreground',
+    bg: 'bg-secondary',
+  },
+};
+
+/* =========================================================
+   DEMO SECTION CONFIG
+   Kept separate because demo data still uses:
+   needsAttention / improvements / lookingGood
+========================================================= */
+
+const demoSectionConfig = {
   needsAttention: {
     title: 'Needs Attention',
     icon: AlertTriangle,
@@ -79,9 +110,10 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
 
   /*
-   * When there is an ID, this is a real saved analysis.
+   * Fetch the real saved analysis when an ID exists.
    *
-   * When there is no ID, /results is our demo report.
+   * /results/:id → real analysis
+   * /results     → demo report
    */
   useEffect(() => {
     if (!id) {
@@ -119,13 +151,13 @@ export default function ResultsPage() {
   }, [id]);
 
   /*
-   * DEMO REPORT
+   * Demo report
    */
   if (!id) {
     return (
       <DashboardLayout>
         <DemoResultsPage
-          analysisResult={analysisResult}
+          demo={analysisResult}
           navigate={navigate}
         />
       </DashboardLayout>
@@ -133,7 +165,7 @@ export default function ResultsPage() {
   }
 
   /*
-   * LOADING
+   * Loading
    */
   if (loading) {
     return (
@@ -152,7 +184,7 @@ export default function ResultsPage() {
   }
 
   /*
-   * ERROR
+   * Error
    */
   if (error || !analysis) {
     return (
@@ -192,9 +224,6 @@ export default function ResultsPage() {
     );
   }
 
-  /*
-   * REAL ANALYSIS DATA
-   */
   return (
     <DashboardLayout>
       <RealResultsPage
@@ -205,47 +234,89 @@ export default function ResultsPage() {
   );
 }
 
-/*
- * REAL RESULTS
- */
+/* =========================================================
+   REAL RESULTS PAGE
+========================================================= */
+
 function RealResultsPage({ analysis, navigate }) {
+  const [copied, setCopied] = useState(false);
+
+  const websiteName =
+    analysis.design?.title || 'Untitled Design';
+
+  const screenshotUrl =
+    analysis.design?.screenshotUrl || '';
+
+  const createdDate =
+    analysis.createdAt ||
+    analysis.design?.createdAt ||
+    null;
+
+  const score = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(analysis.overallScore) || 0
+    )
+  );
+
+  const totalIssues = Array.isArray(analysis.issues)
+    ? analysis.issues.length
+    : 0;
+
+  const scoreLabel =
+    score >= 90
+      ? 'Excellent'
+      : score >= 80
+        ? 'Very Good'
+        : score >= 70
+          ? 'Good'
+          : score >= 50
+            ? 'Needs Work'
+            : 'Needs Attention';
+
   const categories = useMemo(() => {
     const scores = analysis.categoryScores || {};
 
     return [
       {
         name: 'Visual Design',
-        score: scores.visualDesign ?? 0,
+        score: Number(scores.visualDesign) || 0,
         icon: 'Palette',
       },
       {
         name: 'UX',
-        score: scores.ux ?? 0,
+        score: Number(scores.ux) || 0,
         icon: 'Layers',
       },
       {
         name: 'Accessibility',
-        score: scores.accessibility ?? 0,
+        score: Number(scores.accessibility) || 0,
         icon: 'Accessibility',
       },
       {
         name: 'Typography',
-        score: scores.typography ?? 0,
+        score: Number(scores.typography) || 0,
         icon: 'Type',
       },
       {
         name: 'Layout',
-        score: scores.layout ?? 0,
+        score: Number(scores.layout) || 0,
         icon: 'Ruler',
       },
       {
         name: 'Consistency',
-        score: scores.consistency ?? 0,
+        score: Number(scores.consistency) || 0,
         icon: 'Eye',
       },
     ];
   }, [analysis.categoryScores]);
 
+  /*
+   * We currently have issues only.
+   * Low severity is treated as a minor issue,
+   * not as a positive finding.
+   */
   const insights = useMemo(() => {
     const issues = Array.isArray(analysis.issues)
       ? analysis.issues
@@ -253,77 +324,107 @@ function RealResultsPage({ analysis, navigate }) {
 
     return {
       needsAttention: issues.filter(
-        (issue) => issue.severity?.toLowerCase() === 'high'
+        (issue) =>
+          issue.severity?.toLowerCase() === 'high'
       ),
 
       improvements: issues.filter(
         (issue) =>
-          ['medium', 'low'].includes(
-            issue.severity?.toLowerCase()
-          )
+          issue.severity?.toLowerCase() === 'medium'
       ),
 
-      lookingGood: [],
+      minorIssues: issues.filter(
+        (issue) =>
+          issue.severity?.toLowerCase() === 'low'
+      ),
     };
   }, [analysis.issues]);
 
-  const websiteName =
-    analysis.design?.title || 'Untitled Design';
+  const handleShare = async () => {
+    const url = window.location.href;
 
-  const screenshotUrl =
-    analysis.design?.screenshotUrl || null;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `DesignLens — ${websiteName}`,
+          text: `Design audit for ${websiteName}`,
+          url,
+        });
 
-  const createdDate =
-    analysis.createdAt ||
-    analysis.design?.createdAt;
+        return;
+      }
 
-  const score = Number(analysis.overallScore) || 0;
+      await navigator.clipboard.writeText(url);
 
-  const scoreLabel =
-    score >= 85
-      ? 'Excellent'
-      : score >= 70
-        ? 'Good'
-        : score >= 50
-          ? 'Needs Work'
-          : 'Poor';
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2500);
+    } catch (err) {
+      /*
+       * Closing the native share dialog is not an error.
+       */
+      if (err?.name === 'AbortError') {
+        return;
+      }
+
+      console.error('Share failed:', err);
+    }
+  };
+
+  const handleExport = () => {
+    window.print();
+  };
 
   return (
     <>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+      {/* ===================================================
+          HEADER
+      ==================================================== */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <div className="flex min-w-0 items-start gap-3">
           <Link to="/analyze">
-            <Button variant="outline" size="icon">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Back to analyze"
+            >
               <ArrowLeft className="h-4.5 w-4.5" />
             </Button>
           </Link>
 
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-foreground sm:text-2xl">
-              Website Design Audit
+            <div className="mb-1 inline-flex rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+              AI Design Audit
+            </div>
+
+            <h1 className="truncate text-xl font-bold text-foreground sm:text-2xl">
+              {websiteName}
             </h1>
 
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex min-w-0 items-center gap-1">
-                <Globe className="h-3 w-3 shrink-0" />
-
-                <span className="truncate">
-                  {websiteName}
-                </span>
-              </span>
-
               {createdDate && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {formatDate(createdDate)}
                 </span>
               )}
+
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+
+                {totalIssues}{' '}
+                {totalIssues === 1
+                  ? 'issue'
+                  : 'issues'}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {/* Re-analyze */}
           <Button
             variant="outline"
             size="sm"
@@ -333,31 +434,26 @@ function RealResultsPage({ analysis, navigate }) {
             Re-analyze
           </Button>
 
+          {/* Share */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({
-                  title: `DesignLens — ${websiteName}`,
-                  text: `Design audit for ${websiteName}`,
-                  url: window.location.href,
-                });
-              } else {
-                navigator.clipboard?.writeText(
-                  window.location.href
-                );
-              }
-            }}
+            onClick={handleShare}
           >
-            <Share2 className="h-3.5 w-3.5" />
-            Share
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Share2 className="h-3.5 w-3.5" />
+            )}
+
+            {copied ? 'Copied' : 'Share'}
           </Button>
 
+          {/* Export */}
           <Button
             variant="gradient"
             size="sm"
-            onClick={() => window.print()}
+            onClick={handleExport}
           >
             <Download className="h-3.5 w-3.5" />
             Export
@@ -365,75 +461,114 @@ function RealResultsPage({ analysis, navigate }) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column */}
-        <div className="space-y-6 lg:col-span-1">
-          {/* Screenshot */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-muted-foreground">
+      {/* ===================================================
+          SHARE FEEDBACK
+      ==================================================== */}
+      {copied && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-center gap-2 rounded-lg border border-success/20 bg-success/10 px-4 py-2.5 text-sm text-success print:hidden"
+        >
+          <Check className="h-4 w-4" />
+          Report link copied to clipboard.
+        </motion.div>
+      )}
+
+      {/* ===================================================
+          MAIN CONTENT
+      ==================================================== */}
+      <div className="space-y-6">
+        {/* =================================================
+            SCREENSHOT
+        ================================================== */}
+        <section>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
                 Screenshot Preview
               </p>
 
-              {screenshotUrl && (
-                <span className="rounded-md bg-secondary px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                  Uploaded screenshot
-                </span>
-              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                The design analyzed by DesignLens.
+              </p>
             </div>
 
-            <WebsitePreview
-              imageUrl={screenshotUrl}
-              showMarkers={!screenshotUrl}
-              compact
-            />
+            {screenshotUrl && (
+              <span className="w-fit rounded-md bg-secondary px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                Uploaded screenshot
+              </span>
+            )}
           </div>
 
-          {/* Overall score */}
+          <WebsitePreview
+            imageUrl={screenshotUrl}
+            showMarkers={!screenshotUrl}
+            className="w-full"
+          />
+        </section>
+
+        {/* =================================================
+            SCORE + CATEGORY SCORES
+        ================================================== */}
+        <section className="grid gap-6 lg:grid-cols-3">
+          {/* Overall Score */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col items-center rounded-2xl border border-border bg-card p-6"
+            initial={{
+              opacity: 0,
+              y: 16,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.4,
+            }}
+            className="flex min-h-[300px] items-center justify-center rounded-2xl border border-border bg-card p-6"
           >
-            <p className="mb-4 text-sm font-medium text-muted-foreground">
-              Overall Score
-            </p>
+            <div className="flex flex-col items-center text-center">
+              <p className="mb-4 text-sm font-medium text-muted-foreground">
+                Overall Score
+              </p>
 
-            <ScoreRing
-              score={score}
-              size={140}
-              strokeWidth={12}
-            />
+              <ScoreRing
+                score={score}
+                size={150}
+                strokeWidth={12}
+              />
 
-            <div className="mt-4 flex items-center gap-2">
-              <Badge
-                variant={
-                  score >= 70 ? 'success' : 'warning'
-                }
-              >
-                {scoreLabel}
-              </Badge>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <Badge
+                  variant={
+                    score >= 70
+                      ? 'success'
+                      : 'warning'
+                  }
+                >
+                  {scoreLabel}
+                </Badge>
 
-              <span className="max-w-[180px] truncate text-xs text-muted-foreground">
-                {websiteName}
-              </span>
+                <span className="text-xs text-muted-foreground">
+                  {totalIssues}{' '}
+                  {totalIssues === 1
+                    ? 'issue found'
+                    : 'issues found'}
+                </span>
+              </div>
             </div>
           </motion.div>
-        </div>
 
-        {/* Right column */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Category scores */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
+          {/* Category Scores */}
+          <div className="lg:col-span-2">
+            <div className="mb-3">
               <h2 className="text-sm font-semibold text-foreground">
                 Category Scores
               </h2>
 
-              <span className="text-xs text-muted-foreground">
-                {categories.length} categories
-              </span>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A breakdown of your design performance.
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -448,124 +583,156 @@ function RealResultsPage({ analysis, navigate }) {
               ))}
             </div>
           </div>
+        </section>
 
-          {/* Issues */}
-          <div className="space-y-6">
-            {Object.entries(sectionConfig).map(
-              ([key, config]) => {
-                const items = insights[key];
+        {/* =================================================
+            AI FINDINGS
+        ================================================== */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              AI Findings
+            </h2>
 
-                if (!items || items.length === 0) {
-                  return null;
-                }
+            <p className="mt-1 text-sm text-muted-foreground">
+              Issues identified from your uploaded design.
+            </p>
+          </div>
 
-                const Icon = config.icon;
+          {totalIssues === 0 ? (
+            <div className="rounded-2xl border border-success/20 bg-success/5 p-8 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-success/10">
+                <CheckCircle2 className="h-5.5 w-5.5 text-success" />
+              </div>
 
-                return (
-                  <div key={key}>
-                    <div className="mb-3 flex items-center gap-2.5">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg ${config.bg}`}
-                      >
-                        <Icon
-                          className={`h-4.5 w-4.5 ${config.color}`}
-                          size={18}
-                        />
+              <h3 className="font-semibold text-foreground">
+                No issues reported
+              </h3>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                The AI analysis did not identify any issues
+                in this design.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(realSectionConfig).map(
+                ([key, config]) => {
+                  const items = insights[key];
+
+                  if (!items || items.length === 0) {
+                    return null;
+                  }
+
+                  const Icon = config.icon;
+
+                  return (
+                    <div key={key}>
+                      <div className="mb-3 flex items-center gap-2.5">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg ${config.bg}`}
+                        >
+                          <Icon
+                            className={`h-4.5 w-4.5 ${config.color}`}
+                            size={18}
+                          />
+                        </div>
+
+                        <h3 className="text-base font-semibold text-foreground">
+                          {config.title}
+                        </h3>
+
+                        <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          {items.length}
+                        </span>
                       </div>
 
-                      <h2 className="text-base font-semibold text-foreground">
-                        {config.title}
-                      </h2>
-
-                      <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {items.length}
-                      </span>
+                      <div className="grid gap-3">
+                        {items.map((item, index) => (
+                          <InsightCard
+                            key={`${item.title || 'issue'}-${index}`}
+                            title={
+                              item.title ||
+                              'Design issue'
+                            }
+                            explanation={
+                              item.description ||
+                              item.explanation ||
+                              item.whyItMatters ||
+                              'No additional explanation was provided.'
+                            }
+                            recommendation={
+                              item.recommendation ||
+                              'Review this part of the design and consider improving it.'
+                            }
+                            severity={
+                              item.severity ||
+                              'medium'
+                            }
+                            delay={index * 0.05}
+                          />
+                        ))}
+                      </div>
                     </div>
-
-                    <div className="grid gap-3">
-                      {items.map((item, index) => (
-                        <InsightCard
-                          key={`${item.title || 'issue'}-${index}`}
-                          title={item.title || 'Design issue'}
-                          explanation={
-                            item.description ||
-                            item.explanation ||
-                            'No additional explanation was provided.'
-                          }
-                          recommendation={
-                            item.recommendation ||
-                            'Review this area of the design and consider improving it.'
-                          }
-                          severity={
-                            item.severity || 'medium'
-                          }
-                          delay={index * 0.05}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-            )}
-
-            {/* No issues */}
-            {analysis.issues?.length === 0 && (
-              <div className="rounded-xl border border-border bg-card p-6 text-center">
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                </div>
-
-                <h3 className="font-semibold text-foreground">
-                  No issues reported
-                </h3>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  The AI analysis did not identify any issues in this design.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+                  );
+                }
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </>
   );
 }
 
-/*
- * DEMO RESULTS
- *
- * Keeps your original mock report working at /results.
- */
-function DemoResultsPage({ analysisResult, navigate }) {
-  const {
-    websiteName,
-    url,
-    date,
-    overallScore,
-    categories,
-    insights,
-  } = analysisResult;
+/* =========================================================
+   DEMO RESULTS PAGE
+========================================================= */
+
+function DemoResultsPage({ demo, navigate }) {
+  const websiteName =
+    demo?.websiteName || 'Demo Website';
+
+  const url =
+    demo?.url || 'portfolio.studio';
+
+  const date =
+    demo?.date || new Date().toISOString();
+
+  const overallScore =
+    Number(demo?.overallScore) || 0;
+
+  const categories = Array.isArray(demo?.categories)
+    ? demo.categories
+    : [];
+
+  const insights = demo?.insights || {};
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+      {/* Demo Header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <div className="flex min-w-0 items-start gap-3">
           <Link to="/analyze">
-            <Button variant="outline" size="icon">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Back to analyze"
+            >
               <ArrowLeft className="h-4.5 w-4.5" />
             </Button>
           </Link>
 
-          <div>
+          <div className="min-w-0">
             <div className="mb-1 inline-flex rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
               Demo Report
             </div>
 
-            <h1 className="text-xl font-bold text-foreground sm:text-2xl">
-              Website Design Audit
+            <h1 className="truncate text-xl font-bold text-foreground sm:text-2xl">
+              {websiteName}
             </h1>
 
-            <div className="mt-0.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Globe className="h-3 w-3" />
                 {url}
@@ -589,49 +756,74 @@ function DemoResultsPage({ analysisResult, navigate }) {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-1">
-          <div>
-            <p className="mb-3 text-sm font-medium text-muted-foreground">
+      <div className="space-y-6">
+        {/* Demo Screenshot */}
+        <section>
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-foreground">
               Screenshot Preview
             </p>
 
-            <WebsitePreview showMarkers compact />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Example DesignLens analysis.
+            </p>
           </div>
 
+          <WebsitePreview
+            showMarkers
+            className="w-full"
+          />
+        </section>
+
+        {/* Demo Score + Categories */}
+        <section className="grid gap-6 lg:grid-cols-3">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col items-center rounded-2xl border border-border bg-card p-6"
+            initial={{
+              opacity: 0,
+              y: 16,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.4,
+            }}
+            className="flex min-h-[300px] items-center justify-center rounded-2xl border border-border bg-card p-6"
           >
-            <p className="mb-4 text-sm font-medium text-muted-foreground">
-              Overall Score
-            </p>
+            <div className="flex flex-col items-center text-center">
+              <p className="mb-4 text-sm font-medium text-muted-foreground">
+                Overall Score
+              </p>
 
-            <ScoreRing
-              score={overallScore}
-              size={140}
-              strokeWidth={12}
-            />
+              <ScoreRing
+                score={overallScore}
+                size={150}
+                strokeWidth={12}
+              />
 
-            <div className="mt-4 flex items-center gap-2">
-              <Badge variant="success">
-                Good
-              </Badge>
+              <div className="mt-5 flex items-center gap-2">
+                <Badge variant="success">
+                  Good
+                </Badge>
 
-              <span className="text-xs text-muted-foreground">
-                {websiteName}
-              </span>
+                <span className="text-xs text-muted-foreground">
+                  Demo analysis
+                </span>
+              </div>
             </div>
           </motion.div>
-        </div>
 
-        <div className="space-y-6 lg:col-span-2">
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">
-              Category Scores
-            </h2>
+          <div className="lg:col-span-2">
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-foreground">
+                Category Scores
+              </h2>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Example breakdown of the audit.
+              </p>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {categories.map((category, index) => (
@@ -645,13 +837,30 @@ function DemoResultsPage({ analysisResult, navigate }) {
               ))}
             </div>
           </div>
+        </section>
+
+        {/* Demo Findings */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              AI Findings
+            </h2>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Example findings from a DesignLens audit.
+            </p>
+          </div>
 
           <div className="space-y-6">
-            {Object.entries(sectionConfig).map(
+            {Object.entries(demoSectionConfig).map(
               ([key, config]) => {
-                const items = insights[key];
+                const items = Array.isArray(
+                  insights[key]
+                )
+                  ? insights[key]
+                  : [];
 
-                if (!items || items.length === 0) {
+                if (items.length === 0) {
                   return null;
                 }
 
@@ -669,9 +878,9 @@ function DemoResultsPage({ analysisResult, navigate }) {
                         />
                       </div>
 
-                      <h2 className="text-base font-semibold text-foreground">
+                      <h3 className="text-base font-semibold text-foreground">
                         {config.title}
-                      </h2>
+                      </h3>
 
                       <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {items.length}
@@ -681,11 +890,24 @@ function DemoResultsPage({ analysisResult, navigate }) {
                     <div className="grid gap-3">
                       {items.map((item, index) => (
                         <InsightCard
-                          key={`${item.title}-${index}`}
-                          title={item.title}
-                          explanation={item.explanation}
-                          recommendation={item.recommendation}
-                          severity={item.severity}
+                          key={`${key}-${item.title || index}`}
+                          title={
+                            item.title ||
+                            'Design insight'
+                          }
+                          explanation={
+                            item.explanation ||
+                            item.description ||
+                            ''
+                          }
+                          recommendation={
+                            item.recommendation ||
+                            ''
+                          }
+                          severity={
+                            item.severity ||
+                            getDemoSeverity(key)
+                          }
                           delay={index * 0.05}
                         />
                       ))}
@@ -695,8 +917,24 @@ function DemoResultsPage({ analysisResult, navigate }) {
               }
             )}
           </div>
-        </div>
+        </section>
       </div>
     </>
   );
+}
+
+/* =========================================================
+   DEMO HELPERS
+========================================================= */
+
+function getDemoSeverity(key) {
+  if (key === 'needsAttention') {
+    return 'high';
+  }
+
+  if (key === 'lookingGood') {
+    return 'low';
+  }
+
+  return 'medium';
 }

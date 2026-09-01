@@ -130,11 +130,11 @@ export default function WebsitePreview({
 
 function RealScreenshot({ imageUrl }) {
   return (
-    <div className="flex max-h-[520px] justify-center overflow-auto bg-secondary/20">
+    <div className="flex max-h-[760px] justify-center overflow-auto bg-secondary/20 p-2 sm:p-4">
       <img
         src={imageUrl}
         alt="Uploaded website design"
-        className="block h-auto max-h-[520px] w-full object-contain"
+        className="block h-auto max-h-[720px] w-full object-contain"
       />
     </div>
   );

@@ -24,10 +24,10 @@ const severityConfig = {
     label: 'Medium',
   },
   low: {
-    icon: CheckCircle2,
-    bg: 'bg-success/10',
-    text: 'text-success',
-    border: 'border-success/20',
+    icon: Lightbulb,
+    bg: 'bg-secondary',
+    text: 'text-muted-foreground',
+    border: 'border-border',
     label: 'Low',
   },
 };
@@ -51,7 +51,13 @@ export default function InsightCard({
       transition={{ duration: 0.4, delay }}
       className={className}
     >
-      <Card className={cn('p-5 hover:shadow-md transition-shadow', className)}>
+      <Card
+        className={cn(
+          'p-5 transition-shadow hover:shadow-md',
+          config.border,
+          className
+        )}
+      >
         <div className="flex items-start gap-3">
           <div
             className={cn(
