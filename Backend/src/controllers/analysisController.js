@@ -53,9 +53,11 @@ async function analyzeDesignController(req, res) {
         const analysis = await analysisModel.create({
             design: design._id,
             overallScore: aiResponse.overallScore,
+            summary: aiResponse.summary,
             categoryScores: aiResponse.categoryScores,
+            strengths: aiResponse.strengths,
             issues: aiResponse.issues
-        })
+        });
 
         // Analysis completed successfully
         design.status = "completed"

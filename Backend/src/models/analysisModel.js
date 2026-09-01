@@ -1,4 +1,5 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+
 const analysisSchema = new mongoose.Schema({
     design: {
         type: mongoose.Schema.Types.ObjectId,
@@ -9,6 +10,11 @@ const analysisSchema = new mongoose.Schema({
     overallScore: {
         type: Number,
         required: true
+    },
+
+    summary: {
+        type: String,
+        default: ""
     },
 
     categoryScores: {
@@ -43,12 +49,22 @@ const analysisSchema = new mongoose.Schema({
         }
     },
 
+    strengths: {
+        type: Array,
+        default: []
+    },
+
     issues: {
         type: Array,
         default: []
     }
-}, { timestamps: true })
+}, {
+    timestamps: true
+});
 
-const analysisModel = mongoose.model("analyses", analysisSchema)
+const analysisModel = mongoose.model(
+    "analyses",
+    analysisSchema
+);
 
-module.exports = analysisModel
+module.exports = analysisModel;

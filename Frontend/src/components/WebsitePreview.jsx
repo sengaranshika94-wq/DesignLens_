@@ -1,24 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-/**
- * WebsitePreview
- *
- * Displays either:
- * 1. A real uploaded screenshot when imageUrl is provided
- * 2. The existing demo website when no imageUrl is provided
- *
- * Markers are kept for demo mode only because the current marker
- * positions are predefined and do not correspond to real screenshots.
- */
 export default function WebsitePreview({
   imageUrl = null,
   showMarkers = false,
   className,
   markers = defaultMarkers,
 }) {
-  const [scanComplete, setScanComplete] = useState(!showMarkers);
+  const [scanComplete, setScanComplete] = useState(
+    !showMarkers
+  );
 
   useEffect(() => {
     if (!showMarkers) {
@@ -35,8 +27,19 @@ export default function WebsitePreview({
     return () => clearTimeout(timer);
   }, [showMarkers]);
 
-  // Only show the predefined markers for the demo.
-  const shouldShowMarkers = showMarkers && !imageUrl;
+  const safeMarkers = useMemo(() => {
+    if (!Array.isArray(markers)) {
+      return [];
+    }
+
+    return markers.filter(
+      (marker) =>
+        marker &&
+        marker.position &&
+        Number.isFinite(Number(marker.position.x)) &&
+        Number.isFinite(Number(marker.position.y))
+    );
+  }, [markers]);
 
   return (
     <div
@@ -58,13 +61,15 @@ export default function WebsitePreview({
             <span className="h-2 w-2 rounded-full bg-green-400" />
 
             <span className="truncate font-mono">
-              {imageUrl ? 'uploaded-design' : 'portfolio.studio'}
+              {imageUrl
+                ? 'uploaded-design'
+                : 'portfolio.studio'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Screenshot content */}
+      {/* Screenshot */}
       <div className="relative bg-background">
         {imageUrl ? (
           <RealScreenshot imageUrl={imageUrl} />
@@ -72,54 +77,82 @@ export default function WebsitePreview({
           <FakeWebsite />
         )}
 
-        {/* Demo scan line */}
-        {shouldShowMarkers && !scanComplete && (
+        {/* Scan line */}
+        {showMarkers && !scanComplete && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_2px_rgba(14,165,233,0.5)] animate-scan-line" />
+
             <div className="absolute inset-0 bg-primary/5" />
           </div>
         )}
 
-        {/* Demo analysis markers */}
-        {shouldShowMarkers && scanComplete && (
+        {/* Markers */}
+        {showMarkers && scanComplete && safeMarkers.length > 0 && (
           <div className="pointer-events-none absolute inset-0">
             <AnimatePresence>
-              {markers.map((marker, index) => (
-                <motion.div
-                  key={marker.label}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{
-                    delay: index * 0.15,
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 20,
-                  }}
-                  className="absolute"
-                  style={marker.position}
-                >
-                  <div className="group flex items-center gap-0">
+              {safeMarkers.map((marker, index) => {
+                const x = clamp(
+                  Number(marker.position.x),
+                  0,
+                  100
+                );
+
+                const y = clamp(
+                  Number(marker.position.y),
+                  0,
+                  100
+                );
+
+                const color =
+                  marker.color ||
+                  getSeverityColor(marker.severity);
+
+                return (
+                  <motion.div
+                    key={`${marker.label}-${index}`}
+                    initial={{
+                      opacity: 0,
+                      scale: 0.7,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                    }}
+                    transition={{
+                      delay: index * 0.15,
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 20,
+                    }}
+                    className="absolute"
+                    style={{
+                      left: `${x}%`,
+                      top: `${y}%`,
+                    }}
+                  >
+                    {/* Marker */}
                     <div
-                      className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+                      className="h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-background shadow-lg"
                       style={{
-                        borderColor: marker.color,
-                        boxShadow: `0 0 0 4px ${marker.color}30`,
+                        borderColor: color,
+                        boxShadow: `0 0 0 5px ${color}30`,
                       }}
                     />
 
+                    {/* Label */}
                     <div
-                      className="absolute left-4 top-4 whitespace-nowrap rounded-md border px-2 py-1 text-[10px] font-medium shadow-md"
+                      className="absolute left-3 top-3 max-w-[220px] whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[10px] font-medium shadow-lg backdrop-blur-md"
                       style={{
-                        background: `${marker.color}20`,
-                        color: marker.color,
-                        borderColor: `${marker.color}40`,
+                        background: `${color}18`,
+                        borderColor: `${color}55`,
+                        color,
                       }}
                     >
                       {marker.label}
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}
@@ -140,31 +173,69 @@ function RealScreenshot({ imageUrl }) {
   );
 }
 
+function getSeverityColor(severity) {
+  switch (severity?.toLowerCase()) {
+    case 'high':
+      return '#ef4444';
+
+    case 'medium':
+      return '#f59e0b';
+
+    case 'low':
+      return '#0ea5e9';
+
+    default:
+      return '#0ea5e9';
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.min(
+    Math.max(value, min),
+    max
+  );
+}
+
 const defaultMarkers = [
   {
     label: 'Poor contrast',
     color: '#ef4444',
-    position: { top: '14%', left: '48%' },
+    position: {
+      top: '14%',
+      left: '48%',
+    },
   },
   {
     label: 'CTA placement',
     color: '#f59e0b',
-    position: { top: '30%', left: '20%' },
+    position: {
+      top: '30%',
+      left: '20%',
+    },
   },
   {
     label: 'Typography',
     color: '#0ea5e9',
-    position: { top: '52%', left: '55%' },
+    position: {
+      top: '52%',
+      left: '55%',
+    },
   },
   {
     label: 'Spacing',
     color: '#a855f7',
-    position: { top: '68%', left: '18%' },
+    position: {
+      top: '68%',
+      left: '18%',
+    },
   },
   {
     label: 'Accessibility',
     color: '#22c55e',
-    position: { top: '84%', left: '60%' },
+    position: {
+      top: '84%',
+      left: '60%',
+    },
   },
 ];
 

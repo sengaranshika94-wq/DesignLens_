@@ -1,63 +1,38 @@
-// Import the Gemini client that we configured in config/gemini.js
-const ai = require("../config/gemini")
+const ai = require("../config/gemini");
 
-
-// This function is responsible only for communicating with Gemini
-// It receives the uploaded image and asks Gemini to analyze it
 async function analyzeDesign(imageBuffer, mimeType) {
+    const imageBase64 = imageBuffer.toString("base64");
 
-    // Multer gives us the uploaded image as a Buffer.
-    // Gemini can receive the image data as Base64,
-    // so we convert the Buffer into a Base64 string.
-    const imageBase64 = imageBuffer.toString("base64")
-
-
-    // Send the image + our instructions to Gemini
     const response = await ai.models.generateContent({
-
-        // The Gemini model we are using for screenshot analysis
         model: "gemini-3.6-flash",
 
-        // This tells Gemini that we want the final answer as JSON
         config: {
             responseMimeType: "application/json",
 
-            // This describes the exact JSON structure we expect
             responseSchema: {
                 type: "object",
 
                 properties: {
-
-                    // Overall DesignLens score
                     overallScore: {
                         type: "number"
                     },
 
-                    // Scores for each design category
+                    summary: {
+                        type: "string"
+                    },
+
                     categoryScores: {
                         type: "object",
+
                         properties: {
-                            visualDesign: {
-                                type: "number"
-                            },
-                            ux: {
-                                type: "number"
-                            },
-                            accessibility: {
-                                type: "number"
-                            },
-                            typography: {
-                                type: "number"
-                            },
-                            layout: {
-                                type: "number"
-                            },
-                            consistency: {
-                                type: "number"
-                            }
+                            visualDesign: { type: "number" },
+                            ux: { type: "number" },
+                            accessibility: { type: "number" },
+                            typography: { type: "number" },
+                            layout: { type: "number" },
+                            consistency: { type: "number" }
                         },
 
-                        // Require all category scores
                         required: [
                             "visualDesign",
                             "ux",
@@ -68,7 +43,34 @@ async function analyzeDesign(imageBuffer, mimeType) {
                         ]
                     },
 
-                    // List of problems found in the design
+                    strengths: {
+                        type: "array",
+
+                        items: {
+                            type: "object",
+
+                            properties: {
+                                category: {
+                                    type: "string"
+                                },
+
+                                title: {
+                                    type: "string"
+                                },
+
+                                description: {
+                                    type: "string"
+                                }
+                            },
+
+                            required: [
+                                "category",
+                                "title",
+                                "description"
+                            ]
+                        }
+                    },
+
                     issues: {
                         type: "array",
 
@@ -76,7 +78,6 @@ async function analyzeDesign(imageBuffer, mimeType) {
                             type: "object",
 
                             properties: {
-
                                 category: {
                                     type: "string"
                                 },
@@ -99,6 +100,25 @@ async function analyzeDesign(imageBuffer, mimeType) {
 
                                 recommendation: {
                                     type: "string"
+                                },
+
+                                position: {
+                                    type: "object",
+
+                                    properties: {
+                                        x: {
+                                            type: "number"
+                                        },
+
+                                        y: {
+                                            type: "number"
+                                        }
+                                    },
+
+                                    required: [
+                                        "x",
+                                        "y"
+                                    ]
                                 }
                             },
 
@@ -108,85 +128,95 @@ async function analyzeDesign(imageBuffer, mimeType) {
                                 "title",
                                 "description",
                                 "whyItMatters",
-                                "recommendation"
+                                "recommendation",
+                                "position"
                             ]
                         }
                     }
                 },
 
-                // Require the main fields in every response
                 required: [
                     "overallScore",
+                    "summary",
                     "categoryScores",
+                    "strengths",
                     "issues"
                 ]
             }
         },
 
-        // "contents" contains everything we want to send to Gemini
-        // In our case: the screenshot and our analysis instructions
         contents: [
-
-            // First item: the uploaded screenshot
             {
-                // inlineData tells Gemini that we are sending file data directly
                 inlineData: {
-
-                    // Tells Gemini what kind of image this is
-                    // Example: "image/png" or "image/jpeg"
-                    mimeType: mimeType,
-
-                    // The actual image data converted to Base64
+                    mimeType,
                     data: imageBase64
                 }
             },
 
-            // Second item: our instructions
             {
                 text: `
-                    You are a professional UI/UX design reviewer.
+You are a professional UI/UX design reviewer performing a visual audit of a website screenshot.
 
-                    Analyze this website screenshot strictly based
-                    on what can be visually observed.
+Analyze ONLY what can be visually observed in the screenshot.
 
-                    Give scores from 0 to 100 for:
-                    - visualDesign
-                    - ux
-                    - accessibility
-                    - typography
-                    - layout
-                    - consistency
+Evaluate these six dimensions:
+- visualDesign
+- ux
+- accessibility
+- typography
+- layout
+- consistency
 
-                    Calculate an overall score from these categories.
+Give each category a score from 0 to 100.
 
-                    Identify the most important design issues.
+Calculate the overallScore as a reasonable weighted overall assessment of these six category scores.
 
-                    For every issue provide:
-                    - category
-                    - severity
-                    - title
-                    - description
-                    - whyItMatters
-                    - recommendation
+Also provide:
+1. A concise summary of the overall design quality.
+2. A list of genuine strengths.
+3. A list of the most important issues.
 
-                    Do not invent information that cannot be determined
-                    from the screenshot.
+For every issue provide:
+- category
+- severity: "high", "medium", or "low"
+- title
+- description
+- whyItMatters
+- recommendation
 
-                    Return only the requested JSON structure.
-                `
+IMPORTANT FOR ISSUE POSITIONS:
+
+For every issue, identify the approximate visual location of the issue inside the screenshot.
+
+Return the position as normalized percentages:
+- x = horizontal position from the LEFT edge, from 0 to 100
+- y = vertical position from the TOP edge, from 0 to 100
+
+Examples:
+- top-left area = x: 20, y: 20
+- center = x: 50, y: 50
+- bottom-right = x: 80, y: 80
+
+The position must refer to the actual visible area where the issue occurs.
+
+Do NOT invent exact coordinates when an issue cannot be localized visually.
+
+For issues that affect a specific visible element, place the marker near that element.
+For issues that apply to a broader area, place the marker near the center of the affected area.
+
+Do NOT create strengths just to fill space.
+Do NOT create issues that are not visually supported by the screenshot.
+Do NOT infer hidden HTML, CSS, DOM structure, source code, or functionality that cannot be determined visually.
+
+Return only the requested JSON structure.
+`
             }
         ]
-    })
+    });
 
-
-    // Gemini is returning JSON text.
-    // JSON.parse converts that text into a JavaScript object
-    // that our controller can later save into MongoDB.
-    return JSON.parse(response.text)
+    return JSON.parse(response.text);
 }
 
-
-// Export the function so that our controller can use it
 module.exports = {
     analyzeDesign
-}
+};

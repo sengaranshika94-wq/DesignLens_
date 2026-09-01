@@ -5,6 +5,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
 import {
   ArrowLeft,
   Download,
@@ -13,7 +14,6 @@ import {
   AlertTriangle,
   Lightbulb,
   CheckCircle2,
-  Globe,
   Calendar,
   Layers,
   Palette,
@@ -36,6 +36,10 @@ import { getAnalysis } from '@/services/analysisService';
 import { formatDate } from '@/lib/utils';
 import { analysisResult } from '@/data/mockData';
 
+/* =========================================================
+   ICON MAP
+========================================================= */
+
 const iconMap = {
   Layers,
   Palette,
@@ -46,7 +50,7 @@ const iconMap = {
 };
 
 /* =========================================================
-   REAL ANALYSIS SECTIONS
+   REAL FINDING SECTIONS
 ========================================================= */
 
 const realSectionConfig = {
@@ -73,9 +77,7 @@ const realSectionConfig = {
 };
 
 /* =========================================================
-   DEMO SECTION CONFIG
-   Kept separate because demo data still uses:
-   needsAttention / improvements / lookingGood
+   DEMO FINDING SECTIONS
 ========================================================= */
 
 const demoSectionConfig = {
@@ -101,6 +103,10 @@ const demoSectionConfig = {
   },
 };
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function ResultsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -110,10 +116,11 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
 
   /*
-   * Fetch the real saved analysis when an ID exists.
+   * Real analysis:
+   * /results/:id
    *
-   * /results/:id → real analysis
-   * /results     → demo report
+   * Demo:
+   * /results
    */
   useEffect(() => {
     if (!id) {
@@ -150,9 +157,10 @@ export default function ResultsPage() {
     fetchAnalysis();
   }, [id]);
 
-  /*
-   * Demo report
-   */
+  /* =======================================================
+     DEMO REPORT
+  ======================================================= */
+
   if (!id) {
     return (
       <DashboardLayout>
@@ -164,9 +172,10 @@ export default function ResultsPage() {
     );
   }
 
-  /*
-   * Loading
-   */
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -183,9 +192,10 @@ export default function ResultsPage() {
     );
   }
 
-  /*
-   * Error
-   */
+  /* =======================================================
+     ERROR
+  ======================================================= */
+
   if (error || !analysis) {
     return (
       <DashboardLayout>
@@ -224,6 +234,10 @@ export default function ResultsPage() {
     );
   }
 
+  /* =======================================================
+     REAL REPORT
+  ======================================================= */
+
   return (
     <DashboardLayout>
       <RealResultsPage
@@ -235,7 +249,7 @@ export default function ResultsPage() {
 }
 
 /* =========================================================
-   REAL RESULTS PAGE
+   REAL RESULTS
 ========================================================= */
 
 function RealResultsPage({ analysis, navigate }) {
@@ -264,6 +278,10 @@ function RealResultsPage({ analysis, navigate }) {
     ? analysis.issues.length
     : 0;
 
+  const strengths = Array.isArray(analysis.strengths)
+    ? analysis.strengths
+    : [];
+
   const scoreLabel =
     score >= 90
       ? 'Excellent'
@@ -274,6 +292,10 @@ function RealResultsPage({ analysis, navigate }) {
           : score >= 50
             ? 'Needs Work'
             : 'Needs Attention';
+
+  /* =======================================================
+     CATEGORY SCORES
+  ======================================================= */
 
   const categories = useMemo(() => {
     const scores = analysis.categoryScores || {};
@@ -312,11 +334,10 @@ function RealResultsPage({ analysis, navigate }) {
     ];
   }, [analysis.categoryScores]);
 
-  /*
-   * We currently have issues only.
-   * Low severity is treated as a minor issue,
-   * not as a positive finding.
-   */
+  /* =======================================================
+     GROUP ISSUES BY SEVERITY
+  ======================================================= */
+
   const insights = useMemo(() => {
     const issues = Array.isArray(analysis.issues)
       ? analysis.issues
@@ -325,20 +346,62 @@ function RealResultsPage({ analysis, navigate }) {
     return {
       needsAttention: issues.filter(
         (issue) =>
-          issue.severity?.toLowerCase() === 'high'
+          issue?.severity?.toLowerCase() === 'high'
       ),
 
       improvements: issues.filter(
         (issue) =>
-          issue.severity?.toLowerCase() === 'medium'
+          issue?.severity?.toLowerCase() === 'medium'
       ),
 
       minorIssues: issues.filter(
         (issue) =>
-          issue.severity?.toLowerCase() === 'low'
+          issue?.severity?.toLowerCase() === 'low'
       ),
     };
   }, [analysis.issues]);
+
+  /* =======================================================
+     REAL SCREENSHOT MARKERS
+  ======================================================= */
+
+  const analysisMarkers = useMemo(() => {
+    if (!Array.isArray(analysis.issues)) {
+      return [];
+    }
+
+    return analysis.issues
+      .filter((issue) => {
+        const x = Number(issue?.position?.x);
+        const y = Number(issue?.position?.y);
+
+        return (
+          Number.isFinite(x) &&
+          Number.isFinite(y) &&
+          x >= 0 &&
+          x <= 100 &&
+          y >= 0 &&
+          y <= 100
+        );
+      })
+      .map((issue, index) => ({
+        label:
+          issue.title ||
+          `Issue ${index + 1}`,
+
+        severity:
+          issue.severity || 'medium',
+
+        position: {
+          x: Number(issue.position.x),
+          y: Number(issue.position.y),
+        },
+      }));
+  }, [analysis.issues]);
+
+  /* =======================================================
+     SHARE
+  ======================================================= */
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -362,9 +425,6 @@ function RealResultsPage({ analysis, navigate }) {
         setCopied(false);
       }, 2500);
     } catch (err) {
-      /*
-       * Closing the native share dialog is not an error.
-       */
       if (err?.name === 'AbortError') {
         return;
       }
@@ -372,6 +432,10 @@ function RealResultsPage({ analysis, navigate }) {
       console.error('Share failed:', err);
     }
   };
+
+  /* =======================================================
+     EXPORT
+  ======================================================= */
 
   const handleExport = () => {
     window.print();
@@ -382,13 +446,14 @@ function RealResultsPage({ analysis, navigate }) {
       {/* ===================================================
           HEADER
       ==================================================== */}
+
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div className="flex min-w-0 items-start gap-3">
-          <Link to="/analyze">
+          <Link to="/history">
             <Button
               variant="outline"
               size="icon"
-              aria-label="Back to analyze"
+              aria-label="Back to history"
             >
               <ArrowLeft className="h-4.5 w-4.5" />
             </Button>
@@ -424,7 +489,6 @@ function RealResultsPage({ analysis, navigate }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* Re-analyze */}
           <Button
             variant="outline"
             size="sm"
@@ -434,7 +498,6 @@ function RealResultsPage({ analysis, navigate }) {
             Re-analyze
           </Button>
 
-          {/* Share */}
           <Button
             variant="outline"
             size="sm"
@@ -449,7 +512,6 @@ function RealResultsPage({ analysis, navigate }) {
             {copied ? 'Copied' : 'Share'}
           </Button>
 
-          {/* Export */}
           <Button
             variant="gradient"
             size="sm"
@@ -461,13 +523,17 @@ function RealResultsPage({ analysis, navigate }) {
         </div>
       </div>
 
-      {/* ===================================================
-          SHARE FEEDBACK
-      ==================================================== */}
+      {/* Share feedback */}
       {copied && (
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{
+            opacity: 0,
+            y: -5,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
           className="mb-4 flex items-center gap-2 rounded-lg border border-success/20 bg-success/10 px-4 py-2.5 text-sm text-success print:hidden"
         >
           <Check className="h-4 w-4" />
@@ -478,10 +544,12 @@ function RealResultsPage({ analysis, navigate }) {
       {/* ===================================================
           MAIN CONTENT
       ==================================================== */}
-      <div className="space-y-6">
+
+      <div className="space-y-7">
         {/* =================================================
             SCREENSHOT
         ================================================== */}
+
         <section>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -490,27 +558,66 @@ function RealResultsPage({ analysis, navigate }) {
               </p>
 
               <p className="mt-1 text-xs text-muted-foreground">
-                The design analyzed by DesignLens.
+                Visual findings are positioned directly on the design.
               </p>
             </div>
 
-            {screenshotUrl && (
-              <span className="w-fit rounded-md bg-secondary px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                Uploaded screenshot
+            {analysisMarkers.length > 0 && (
+              <span className="w-fit rounded-md bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                {analysisMarkers.length}{' '}
+                {analysisMarkers.length === 1
+                  ? 'marker'
+                  : 'markers'}
               </span>
             )}
           </div>
 
           <WebsitePreview
             imageUrl={screenshotUrl}
-            showMarkers={!screenshotUrl}
+            showMarkers
+            markers={analysisMarkers}
             className="w-full"
           />
         </section>
 
         {/* =================================================
+            SUMMARY
+        ================================================== */}
+
+        {analysis.summary && (
+          <motion.section
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            className="rounded-2xl border border-border bg-card p-5 sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Lightbulb className="h-4 w-4" />
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  AI Summary
+                </h2>
+
+                <p className="mt-1.5 text-sm leading-7 text-muted-foreground">
+                  {analysis.summary}
+                </p>
+              </div>
+            </div>
+          </motion.section>
+        )}
+
+        {/* =================================================
             SCORE + CATEGORY SCORES
         ================================================== */}
+
         <section className="grid gap-6 lg:grid-cols-3">
           {/* Overall Score */}
           <motion.div
@@ -586,8 +693,68 @@ function RealResultsPage({ analysis, navigate }) {
         </section>
 
         {/* =================================================
+            STRENGTHS
+        ================================================== */}
+
+        {strengths.length > 0 && (
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                What&apos;s Working
+              </h2>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Areas where your design is already performing well.
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {strengths.map((strength, index) => (
+                <motion.div
+                  key={`${strength.title || 'strength'}-${index}`}
+                  initial={{
+                    opacity: 0,
+                    y: 10,
+                  }}
+                  whileInView={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  viewport={{
+                    once: true,
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    delay: index * 0.05,
+                  }}
+                  className="rounded-xl border border-success/20 bg-success/5 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        {strength.title ||
+                          'Strong design choice'}
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        {strength.description || ''}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* =================================================
             AI FINDINGS
         ================================================== */}
+
         <section>
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-foreground">
@@ -610,8 +777,7 @@ function RealResultsPage({ analysis, navigate }) {
               </h3>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                The AI analysis did not identify any issues
-                in this design.
+                The AI analysis did not identify any issues in this design.
               </p>
             </div>
           ) : (
@@ -686,7 +852,7 @@ function RealResultsPage({ analysis, navigate }) {
 }
 
 /* =========================================================
-   DEMO RESULTS PAGE
+   DEMO RESULTS
 ========================================================= */
 
 function DemoResultsPage({ demo, navigate }) {
@@ -734,11 +900,6 @@ function DemoResultsPage({ demo, navigate }) {
 
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Globe className="h-3 w-3" />
-                {url}
-              </span>
-
-              <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {formatDate(date)}
               </span>
@@ -756,7 +917,7 @@ function DemoResultsPage({ demo, navigate }) {
         </Button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Demo Screenshot */}
         <section>
           <div className="mb-3">
