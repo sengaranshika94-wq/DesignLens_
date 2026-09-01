@@ -150,8 +150,40 @@ async function getDesignAnalyses(req, res) {
     }
 }
 
+// Fetches all analyses belonging to the logged-in user,
+// with the newest analysis first.
+async function getUserAnalyses(req, res) {
+    try {
+        // Find all designs belonging to the logged-in user
+        const designs = await designModel.find({
+            user: req.user.id
+        }).select("_id title screenshotUrl")
+
+        const designIds = designs.map((design) => design._id)
+
+        // Find all analyses belonging to those designs
+        const analyses = await analysisModel.find({
+            design: { $in: designIds }
+        })
+        .populate("design")
+        .sort({ createdAt: -1 })
+
+        return res.status(200).json({
+            message: "History fetched successfully",
+            analyses
+        })
+
+    } catch (err) {
+        console.error("GET USER ANALYSES ERROR:", err)
+
+        return res.status(500).json({
+            message: "Failed to fetch history"
+        })
+    }
+}
 module.exports = {
     analyzeDesignController,
     getAnalysis,
-    getDesignAnalyses
+    getDesignAnalyses,
+    getUserAnalyses
 }
