@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }) {
   const accountRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const { user } = useAuth();
+  const { user,logout } = useAuth();
 
   const currentNav =
     navItems.find((item) => item.to === location.pathname) ||
@@ -288,6 +288,16 @@ export default function DashboardLayout({ children }) {
                         Settings
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                      await logout();
+                      window.location.href = '/login';
+                    }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      Logout
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>

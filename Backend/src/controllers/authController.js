@@ -2,6 +2,7 @@ const userModel = require("../models/userModel")
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const redis = require('../config/cache')
+const crypto = require('crypto');
 async function registerController(req, res) {
     try {
         const { username, email, password } = req.body;
@@ -66,7 +67,10 @@ async function loginController(req,res){
     }
     const token = jwt.sign({
         id:user._id
-    },process.env.JWT_SECRET,{expiresIn:'3d'})
+    },process.env.JWT_SECRET,{
+        expiresIn:'3d',
+        jwtid: crypto.randomUUID(),
+    })
 
     res.cookie("token", token, {
     httpOnly: true,

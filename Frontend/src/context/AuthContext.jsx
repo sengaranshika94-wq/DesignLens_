@@ -26,10 +26,11 @@ export function AuthProvider({children}){
     async function logout(){
         try{
             await logoutUser()
-            setUser(null)
         }catch(error){
-            console.log("logout failed",error);
-            
+            console.log("logout failed",error);   
+        }
+        finally{
+            setUser(null)
         }
     }
     return(
