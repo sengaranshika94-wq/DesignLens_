@@ -19,3 +19,12 @@ export async function getUser() {
     const response = await api.get('/auth/getUser')
     return response.data
 }
+
+export async function updateProfile(profileData) {
+    const response = await api.patch(
+        '/auth/profile',
+        profileData
+    )
+
+    return response.data
+}

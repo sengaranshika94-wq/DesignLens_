@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Palette, Check } from 'lucide-react';
+import {
+  User,
+  Bell,
+  Palette,
+  ShieldCheck,
+  Check,
+} from 'lucide-react';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {
@@ -15,168 +21,315 @@ import Input from '@/components/ui/Input';
 import { ThemeSelector } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 
-import { getUser } from '@/services/authService';
+import { updateProfile } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SettingsPage() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setUser } = useAuth();
+
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const data = await getUser();
-        setUser(data.user);
-      } catch (error) {
-        console.error('Failed to load user:', error);
-      } finally {
-        setLoading(false);
-      }
+    if (!user) return;
+
+    setUsername(user.username || '');
+    setEmail(user.email || '');
+  }, [user]);
+
+  const initials =
+    username.trim().slice(0, 2).toUpperCase() || 'U';
+
+  const hasChanges =
+    username.trim() !== (user?.username || '') ||
+    email.trim() !== (user?.email || '');
+
+  const handleSaveProfile = async () => {
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim();
+
+    setError('');
+    setSuccess('');
+
+    if (!cleanUsername || !cleanEmail) {
+      setError('Username and email are required.');
+      return;
     }
 
-    fetchUser();
-  }, []);
+    try {
+      setSaving(true);
+
+      const data = await updateProfile({
+        username: cleanUsername,
+        email: cleanEmail,
+      });
+
+      if (!data?.user) {
+        throw new Error('Updated user data was not returned.');
+      }
+
+      // Update global auth state
+      setUser(data.user);
+
+      // Keep local form state in sync
+      setUsername(data.user.username);
+      setEmail(data.user.email);
+
+      setSuccess('Profile updated successfully.');
+
+      window.setTimeout(() => {
+        setSuccess('');
+      }, 2500);
+    } catch (err) {
+      console.error('PROFILE UPDATE ERROR:', err);
+
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to update your profile.'
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <DashboardLayout>
+      {/* Page heading */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-2xl font-bold text-foreground">
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-primary">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Account
+        </div>
+
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
           Settings
         </h1>
 
-        <p className="mt-1 text-muted-foreground">
-          Manage your account, appearance, and notifications.
+        <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+          Manage your account, appearance, and notification preferences.
         </p>
       </motion.div>
 
       <div className="max-w-2xl space-y-6">
         {/* Profile */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <User className="h-4.5 w-4.5" size={18} />
-              </div>
-
-              <div>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>
-                  View your account information.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            ) : (
-              <>
-                {/* Avatar */}
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-cyan-400 text-xl font-bold text-white">
-                    {user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <User className="h-5 w-5" />
                 </div>
 
-                {/* User information */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-foreground">
-                      Username
-                    </label>
+                <div>
+                  <CardTitle>Profile</CardTitle>
+                  <CardDescription>
+                    Manage your DesignLens account information.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
 
-                    <Input
-                      value={user?.username || ''}
-                      readOnly
-                    />
+            <CardContent>
+              {!user ? (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  Unable to load your account information.
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {/* Avatar */}
+                  <div className="flex items-center gap-4 rounded-xl border border-border bg-secondary/30 p-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-cyan-400 text-lg font-bold text-white shadow-sm">
+                      {initials}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {username || 'User'}
+                      </p>
+
+                      <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                        {email || 'No email available'}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-foreground">
-                      Email
-                    </label>
+                  {/* Error */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                      role="alert"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
 
-                    <Input
-                      type="email"
-                      value={user?.email || ''}
-                      readOnly
-                    />
+                  {/* Success */}
+                  {success && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-success"
+                      role="status"
+                    >
+                      <Check className="h-4 w-4" />
+                      {success}
+                    </motion.div>
+                  )}
+
+                  {/* Inputs */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="settings-username"
+                        className="mb-1.5 block text-sm font-medium text-foreground"
+                      >
+                        Username
+                      </label>
+
+                      <Input
+                        id="settings-username"
+                        value={username}
+                        onChange={(event) => {
+                          setUsername(event.target.value);
+                          setError('');
+                          setSuccess('');
+                        }}
+                        disabled={saving}
+                        placeholder="Your username"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="settings-email"
+                        className="mb-1.5 block text-sm font-medium text-foreground"
+                      >
+                        Email
+                      </label>
+
+                      <Input
+                        id="settings-email"
+                        type="email"
+                        value={email}
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          setError('');
+                          setSuccess('');
+                        }}
+                        disabled={saving}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Save button */}
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="gradient"
+                      onClick={handleSaveProfile}
+                      disabled={saving || !hasChanges}
+                    >
+                      {saving ? (
+                        <>
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex justify-end">
-                  <Button size="sm" disabled>
-                    <Check className="h-4 w-4" />
-                    Save Changes
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Appearance */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Palette className="h-4.5 w-4.5" size={18} />
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Palette className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <CardTitle>Appearance</CardTitle>
+                  <CardDescription>
+                    Customize how DesignLens looks on your device.
+                  </CardDescription>
+                </div>
               </div>
+            </CardHeader>
 
-              <div>
-                <CardTitle>Appearance</CardTitle>
-
-                <CardDescription>
-                  Customize how DesignLens looks on your device.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            <div>
+            <CardContent>
               <label className="mb-3 block text-sm font-medium text-foreground">
                 Theme
               </label>
 
               <ThemeSelector />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Bell className="h-4.5 w-4.5" size={18} />
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Bell className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <CardTitle>Notifications</CardTitle>
+                  <CardDescription>
+                    Choose the notifications you want to receive.
+                  </CardDescription>
+                </div>
               </div>
+            </CardHeader>
 
-              <div>
-                <CardTitle>Notifications</CardTitle>
-
-                <CardDescription>
-                  Choose what you want to be notified about.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {notificationSettings.map((setting) => (
-              <ToggleRow
-                key={setting.key}
-                {...setting}
-              />
-            ))}
-          </CardContent>
-        </Card>
+            <CardContent className="divide-y divide-border">
+              {notificationSettings.map((setting) => (
+                <ToggleRow
+                  key={setting.key}
+                  title={setting.title}
+                  description={setting.description}
+                  defaultOn={setting.defaultOn}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </DashboardLayout>
   );
@@ -212,13 +365,13 @@ function ToggleRow({
   defaultOn,
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
+    <div className="flex items-center justify-between gap-5 py-4 first:pt-0 last:pb-0">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">
           {title}
         </p>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="mt-1 max-w-lg text-xs leading-5 text-muted-foreground">
           {description}
         </p>
       </div>
@@ -233,13 +386,15 @@ function Toggle({ defaultOn = false }) {
 
   return (
     <button
-      onClick={() => setOn(!on)}
+      type="button"
+      onClick={() => setOn((previous) => !previous)}
       className={cn(
-        'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+        'relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 focus:ring-offset-background',
         on ? 'bg-primary' : 'bg-muted'
       )}
       role="switch"
       aria-checked={on}
+      aria-label={on ? 'Disable notification' : 'Enable notification'}
     >
       <motion.div
         layout

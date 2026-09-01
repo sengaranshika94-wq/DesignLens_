@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+
 import Logo from '@/components/Logo';
 import Button from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { cn } from '@/lib/utils';
 
 const navLinks = [
   { label: 'Product', href: '/#product' },
@@ -17,17 +17,26 @@ const navLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const closeMobileMenu = () => {
+    setMobileOpen(false);
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
+        {/* Brand + Desktop Navigation */}
+        <div className="flex min-w-0 items-center gap-8">
           <Logo />
-          <nav className="hidden items-center gap-1 md:flex">
+
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-1 md:flex"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 {link.label}
               </a>
@@ -35,58 +44,97 @@ export default function Navbar() {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        {/* Desktop Actions */}
+        <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
-          <NavLink to="/login">
+
+          <Link to="/login">
             <Button variant="ghost" size="sm">
               Log in
             </Button>
-          </NavLink>
-          <NavLink to="/register">
+          </Link>
+
+          <Link to="/register">
             <Button variant="gradient" size="sm">
               Get Started
             </Button>
-          </NavLink>
+          </Link>
         </div>
 
+        {/* Mobile Actions */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
+
           <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-foreground"
-            aria-label="Toggle menu"
+            type="button"
+            onClick={() => setMobileOpen((previous) => !previous)}
+            aria-label={
+              mobileOpen ? 'Close navigation menu' : 'Open navigation menu'
+            }
+            aria-expanded={mobileOpen}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
 
-      <AnimatePresence>
+      {/* Mobile Menu */}
+      <AnimatePresence initial={false}>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{
+              opacity: 0,
+              height: 0,
+            }}
+            animate={{
+              opacity: 1,
+              height: 'auto',
+            }}
+            exit={{
+              opacity: 0,
+              height: 0,
+            }}
+            transition={{
+              duration: 0.2,
+            }}
             className="overflow-hidden border-t border-border bg-background md:hidden"
           >
-            <div className="flex flex-col gap-1 px-4 py-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+            <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+              <nav
+                aria-label="Mobile navigation"
+                className="flex flex-col gap-1"
+              >
+                {navLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    onClick={closeMobileMenu}
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+
+              <div className="mt-3 grid gap-2 border-t border-border pt-4">
+                <Link
+                  to="/login"
+                  onClick={closeMobileMenu}
                 >
-                  {link.label}
-                </a>
-              ))}
-              <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
-                <Link to="/login" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full">
                     Log in
                   </Button>
                 </Link>
-                <Link to="/register" onClick={() => setMobileOpen(false)}>
+
+                <Link
+                  to="/register"
+                  onClick={closeMobileMenu}
+                >
                   <Button variant="gradient" className="w-full">
                     Get Started
                   </Button>

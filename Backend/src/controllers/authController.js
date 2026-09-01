@@ -100,10 +100,80 @@ async function getUserController(req,res){
         user
     })
 }
+async function updateProfileController(req, res) {
+    try {
+        const { username, email } = req.body;
 
+        const cleanUsername = username?.trim();
+        const cleanEmail = email?.trim();
+
+        if (!cleanUsername || !cleanEmail) {
+            return res.status(400).json({
+                message: "username and email are required"
+            });
+        }
+
+        // Check whether another user already has this username or email
+        const existingUser = await userModel.findOne({
+            $or: [
+                { username: cleanUsername },
+                { email: cleanEmail }
+            ],
+            _id: { $ne: req.user.id }
+        });
+
+        if (existingUser) {
+            if (existingUser.username === cleanUsername) {
+                return res.status(409).json({
+                    message: "username already exists"
+                });
+            }
+
+            if (existingUser.email === cleanEmail) {
+                return res.status(409).json({
+                    message: "email already exists"
+                });
+            }
+
+            return res.status(409).json({
+                message: "username or email already exists"
+            });
+        }
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            req.user.id,
+            {
+                username: cleanUsername,
+                email: cleanEmail
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        ).select("_id username email");
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                message: "user not found"
+            });
+        }
+
+        return res.status(200).json({
+            message: "profile updated successfully",
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error("UPDATE PROFILE ERROR:", error);
+
+        return res.status(500).json({
+            message: "failed to update profile"
+        });
+    }
+}
 module.exports = {
     registerController,
     loginController,
     logoutController,
-    getUserController
+    getUserController,
+    updateProfileController
 }

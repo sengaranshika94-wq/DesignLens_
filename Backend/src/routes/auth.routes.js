@@ -6,4 +6,9 @@ authRouter.post("/register",authController.registerController)
 authRouter.post("/login",authController.loginController)
 authRouter.get("/logout",authController.logoutController)
 authRouter.get("/getUser",authMiddleware,authController.getUserController)
+authRouter.patch(
+    "/profile",
+    authMiddleware,
+    authController.updateProfileController
+)
 module.exports = authRouter
