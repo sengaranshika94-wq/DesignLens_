@@ -17,3 +17,8 @@ export async function getDesignAnalyses(designId) {
 
     return response.data
 }
+export async function getUserAnalyses() {
+    const response = await api.get("/analysis/history")
+
+    return response.data
+}

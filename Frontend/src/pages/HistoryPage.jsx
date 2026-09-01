@@ -7,18 +7,65 @@ import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
-import { getFilteredHistory, historyFilters, statusMap } from '@/data/mockData';
+import { useEffect} from 'react';
+import { getUserAnalyses } from '@/services/analysisService';
 import { getScoreColor, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 export default function HistoryPage() {
+  
+
+  const [analyses, setAnalyses] = useState([]);
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filtered = useMemo(
-    () => getFilteredHistory(filter, search),
-    [filter, search]
-  );
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const data = await getUserAnalyses();
+
+        setAnalyses(data.analyses);
+      } catch (err) {
+        console.error('Failed to fetch history:', err);
+
+        setError(
+          err.response?.data?.message ||
+          'Failed to load history.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchHistory();
+  }, [])
+
+  const filtered = useMemo(() => {
+  const normalized = analyses.map((analysis) => ({
+    id: analysis._id,
+    name: analysis.design?.title || 'Untitled Design',
+    url: analysis.design?.screenshotUrl || '',
+    score: analysis.overallScore,
+    date: analysis.createdAt,
+    status: analysis.design?.status || 'completed',
+    issues: analysis.issues?.length || 0,
+    analysisId: analysis._id,
+  }));
+
+  return normalized.filter((item) => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.url.toLowerCase().includes(search.toLowerCase());
+
+    const matchesFilter =
+      filter === 'All' ||
+      item.status.toLowerCase() === filter.toLowerCase();
+
+    return matchesSearch && matchesFilter;
+  });
+}, [analyses, filter, search]);
 
   return (
     <DashboardLayout>
@@ -45,7 +92,7 @@ export default function HistoryPage() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          {historyFilters.map((f) => (
+          {['All'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -93,8 +140,8 @@ export default function HistoryPage() {
                   <div className="relative h-32 overflow-hidden border-b border-border bg-secondary/30">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
                     <div className="absolute left-3 top-3">
-                      <Badge variant={statusMap[item.status]?.variant}>
-                        {statusMap[item.status]?.label}
+                      <Badge variant="success">
+                        {item.status}
                       </Badge>
                     </div>
                     <div className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-lg bg-card/80 backdrop-blur">
@@ -129,7 +176,10 @@ export default function HistoryPage() {
                         {item.issues} issues
                       </span>
                     </div>
-                    <Link to="/results" className="mt-4 block">
+                    <Link
+                        to={`/results/${item.analysisId}`}
+                        className="mt-4 block"
+                      >
                       <Button variant="outline" size="sm" className="w-full">
                         <Eye className="h-3.5 w-3.5" />
                         View Report
