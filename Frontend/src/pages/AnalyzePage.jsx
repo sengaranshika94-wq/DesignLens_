@@ -7,9 +7,15 @@ import UploadZone from '@/components/UploadZone';
 import Button from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
+import { createDesign } from '@/services/designService';
+import { analyzeDesign } from '@/services/analysisService';
+
 export default function AnalyzePage() {
   const navigate = useNavigate();
+ 
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState('');
 
   const handleDemo = () => {
     setIsAnalyzing(true);
@@ -18,13 +24,51 @@ export default function AnalyzePage() {
     }, 2200);
   };
 
-  const handleFile = () => {
-    setIsAnalyzing(true);
-    setTimeout(() => {
-      navigate('/results');
-    }, 2200);
+  const handleFile = (file) => { //The user selected a file, so remember that file."
+  setSelectedFile(file);
+  setError('');
   };
+  const handleAnalyze = async () => {
+      if (!selectedFile) {
+        setError('Please select a screenshot first.');
+        return;
+      }
 
+      try {
+        setError('');
+        setIsAnalyzing(true);
+
+        // 1. Upload screenshot and create Design
+        const designResponse = await createDesign(
+          selectedFile,
+          selectedFile.name
+        );
+
+        const designId = designResponse.design._id;
+
+        console.log('Design created:', designId);
+
+        // 2. Ask Gemini to analyze that Design
+        const analysisResponse = await analyzeDesign(designId);
+
+        const analysisId = analysisResponse.analysis._id;
+
+        console.log('Analysis created:', analysisId);
+
+        // 3. Open the results page
+        navigate(`/results/${analysisId}`);
+
+      } catch (error) {
+        console.error('ANALYSIS FLOW ERROR:', error);
+
+        setError(
+          error.response?.data?.message ||
+          'Something went wrong while analyzing your design.'
+        );
+
+        setIsAnalyzing(false);
+      }
+    };
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -82,10 +126,20 @@ export default function AnalyzePage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mt-10"
         >
+          {error && (
+            <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          
           {isAnalyzing ? (
             <AnalyzingState />
           ) : (
-            <UploadZone onFileSelected={handleFile} onDemo={handleDemo} />
+            <UploadZone
+            onFileSelected={handleFile}
+            onAnalyze={handleAnalyze}
+            onDemo={handleDemo}
+          />
           )}
         </motion.div>
 

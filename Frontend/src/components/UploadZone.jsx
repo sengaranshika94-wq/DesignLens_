@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 export default function UploadZone({
   onFileSelected,
+  onAnalyze,
   onDemo,
   className,
   compact = false,
@@ -95,7 +96,7 @@ export default function UploadZone({
                 <Button size="sm" variant="outline" onClick={clearPreview}>
                   <X className="h-3.5 w-3.5" /> Remove
                 </Button>
-                <Button size="sm" variant="gradient" onClick={onDemo}>
+                <Button size="sm" variant="gradient" onClick={onAnalyze}>
                   <Sparkles className="h-3.5 w-3.5" /> Analyze
                 </Button>
               </div>

@@ -67,6 +67,14 @@ export default function AppRoutes() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route
+                        path="/results/:id"
+                        element={
+                            <ProtectedRoute>
+                                <ResultsPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
                     <Route
                         path="/history"
