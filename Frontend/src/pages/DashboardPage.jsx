@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState,useEffect, useSyncExternalStore } from 'react';
 import { motion } from 'framer-motion';
 import {
   Globe,
@@ -15,10 +16,29 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { recentAnalyses, statusMap } from '@/data/mockData';
 import { getScoreColor, formatDate } from '@/lib/utils';
-
+import { getDesigns } from '../services/designService';
+import {useAuth} from '@/context/AuthContext'
 const statIcons = { Globe, TrendingUp, Wrench, ArrowUpRight };
 
 export default function DashboardPage() {
+  const [designs, setDesigns] = useState([])
+  const [loading, setLoading] = useState(true)
+  const {user}= useAuth()
+  useEffect(()=>{
+    async function fetchDesigns() {
+      try{
+        const data = await getDesigns()
+        setDesigns(data.designs)
+      }catch(error)
+      {
+        console.log("failed to fetch designs",error);
+      }finally{
+        setLoading(false)
+      }
+    }
+    fetchDesigns()
+  },[])
+  console.log("DESIGNS:", designs)
   return (
     <DashboardLayout>
       {/* Welcome */}
@@ -28,7 +48,7 @@ export default function DashboardPage() {
         className="mb-8"
       >
         <h1 className="text-2xl font-bold text-foreground">
-          Welcome back, Jordan
+          Welcome back, {user?.username || "User"}
         </h1>
         <p className="mt-1 text-muted-foreground">
           Here's an overview of your design analyses.

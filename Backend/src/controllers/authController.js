@@ -21,7 +21,11 @@ async function registerController(req,res){
     const token=jwt.sign({
         id:user._id
     },process.env.JWT_SECRET,{expiresIn:'3d'})
-
+    res.cookie("token", token, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax"
+    })
     return res.status(201).json({
         user:{
             id:user._id,
@@ -57,7 +61,11 @@ async function loginController(req,res){
         id:user._id
     },process.env.JWT_SECRET,{expiresIn:'3d'})
 
-    res.cookie("token",token)
+    res.cookie("token", token, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax"
+    })
     return res.status(200).json({
         message:"user logged in successfully ",
         user: {
@@ -69,9 +77,15 @@ async function loginController(req,res){
 }
 
 async function logoutController(req,res){
-    const token = req.cookies.token
-    res.clearCookie("token")
-    await redis.set(token, "blacklisted", "EX", 3600)
+    res.clearCookie("token", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax"
+    })
+     if (token) {
+        await redis.set(token, "blacklisted", "EX", 3600)
+    }
+    
     return res.status(200).json({
         message: "user logged out successfully"
     })

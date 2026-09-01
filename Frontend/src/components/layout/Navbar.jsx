@@ -37,7 +37,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
-          <NavLink to="/analyze">
+          <NavLink to="/login">
             <Button variant="ghost" size="sm">
               Log in
             </Button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   ScanLine,
@@ -57,6 +58,14 @@ export default function DashboardSidebar({ onNavigate }) {
 }
 
 export function DashboardSidebarMobile({ open, onClose }) {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    onClose();
+    navigate('/login');
+  }
   return (
     <AnimatePresence>
       {open && (
@@ -86,7 +95,7 @@ export function DashboardSidebarMobile({ open, onClose }) {
             </div>
             <DashboardSidebar onNavigate={onClose} />
             <div className="border-t border-border p-3">
-              <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">
+              <button  onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">
                 <LogOut className="h-4.5 w-4.5" size={18} />
                 Log out
               </button>
@@ -99,6 +108,13 @@ export function DashboardSidebarMobile({ open, onClose }) {
 }
 
 export function DashboardSidebarDesktop() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login');
+  }
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card/50 lg:flex">
       <div className="flex h-16 items-center border-b border-border px-4">
@@ -106,7 +122,7 @@ export function DashboardSidebarDesktop() {
       </div>
       <DashboardSidebar />
       <div className="border-t border-border p-3">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">
+        <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">
           <LogOut className="h-4.5 w-4.5" size={18} />
           Log out
         </button>
