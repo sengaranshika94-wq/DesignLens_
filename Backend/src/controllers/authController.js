@@ -77,6 +77,8 @@ async function loginController(req,res){
 }
 
 async function logoutController(req,res){
+    const token = req.cookies.token
+    
     res.clearCookie("token", {
     httpOnly: true,
     secure: false,
