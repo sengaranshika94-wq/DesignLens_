@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+} from 'lucide-react';
+
 import Button from '@/components/ui/Button';
 import { loginUser } from '@/services/authService';
 
@@ -19,26 +26,34 @@ export default function LoginPage() {
     e.preventDefault();
 
     setError('');
+
+    const cleanIdentifier = identifier.trim();
+
+    if (!cleanIdentifier) {
+      setError('Please enter your email or username.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Backend expects "identifier"
-      // It can be either the user's email or username
       await loginUser({
-        identifier,
-        password
+        identifier: cleanIdentifier,
+        password,
       });
 
-      // Backend sets the JWT inside an HTTP-only cookie.
-      // We don't store the token manually in localStorage.
-
       navigate('/dashboard');
-
     } catch (err) {
+      console.error('LOGIN ERROR:', err);
+
       setError(
         err.response?.data?.message ||
-        err.message ||
-        'An error occurred during login'
+          'Unable to sign in. Please check your credentials and try again.'
       );
     } finally {
       setLoading(false);
@@ -46,80 +61,107 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 sm:px-6">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 bg-grid opacity-20" />
+
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[400px] w-[650px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="relative z-10 w-full max-w-md"
       >
-        {/* Logo / Heading */}
-        <div className="text-center mb-8">
+        {/* Header */}
+        <div className="mb-8 text-center">
           <Link
             to="/"
-            className="inline-block text-2xl font-bold text-foreground mb-6"
+            className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground"
           >
             Design<span className="text-primary">Lens</span>
           </Link>
 
-          <h1 className="text-2xl font-bold text-foreground">
+          <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            AI-powered design analysis
+          </div>
+
+          <h1 className="mt-5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Welcome back
           </h1>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to continue analyzing your designs
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+            Sign in to continue analyzing your designs and reviewing
+            your audit history.
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        {/* Login card */}
+        <div className="rounded-2xl border border-border bg-card/95 p-6 shadow-xl backdrop-blur sm:p-7">
           <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Identifier */}
+            {/* Email / Username */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">
+              <label
+                htmlFor="identifier"
+                className="mb-2 block text-sm font-medium text-foreground"
+              >
                 Email or Username
               </label>
 
               <input
+                id="identifier"
                 type="text"
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={(e) => {
+                  setIdentifier(e.target.value);
+                  setError('');
+                }}
                 placeholder="Enter your email or username"
+                autoComplete="username"
                 required
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary"
+                disabled={loading}
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
             {/* Password */}
             <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="block text-sm font-medium text-foreground">
-                  Password
-                </label>
-
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium text-foreground"
+              >
+                Password
+              </label>
 
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError('');
+                  }}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   required
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 pr-12 text-sm text-foreground outline-none transition focus:border-primary"
+                  disabled={loading}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setShowPassword((previous) => !previous)
+                  }
+                  disabled={loading}
+                  aria-label={
+                    showPassword
+                      ? 'Hide password'
+                      : 'Show password'
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -132,20 +174,29 @@ export default function LoginPage() {
 
             {/* Error */}
             {error && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm leading-5 text-destructive"
+                role="alert"
+              >
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                <span>{error}</span>
+              </motion.div>
             )}
 
             {/* Submit */}
             <Button
               type="submit"
               variant="gradient"
-              className="w-full"
+              className="h-11 w-full rounded-xl"
               disabled={loading}
             >
               {loading ? (
-                'Signing in...'
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Signing in...
+                </>
               ) : (
                 <>
                   Sign In
@@ -155,37 +206,45 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          {/* Trust note */}
+          <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-success" />
+            Your account is protected with secure authentication.
+          </div>
+
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">
-              OR
+
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              New to DesignLens?
             </span>
+
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          {/* GitHub - not connected yet
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled
-          >
-            <Github className="h-4 w-4" />
-            Continue with GitHub
-          </Button> */}
+          {/* Register CTA */}
+          <Link to="/register" className="block">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full rounded-xl"
+            >
+              Create an account
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
 
-        {/* Register */}
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
+        {/* Back to landing */}
+        <div className="mt-6 text-center">
           <Link
-            to="/register"
-            className="font-medium text-primary hover:underline"
+            to="/"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Create one
+            ← Back to DesignLens
           </Link>
-        </p>
+        </div>
       </motion.div>
     </div>
   );
