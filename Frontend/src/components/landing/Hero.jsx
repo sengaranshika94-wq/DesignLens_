@@ -46,7 +46,7 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-            <Link to="/analyze">
+            <Link to="/login">
               <Button variant="gradient" size="lg" className="w-full sm:w-auto">
                 Analyze My Website
                 <ArrowRight className="h-4.5 w-4.5" />

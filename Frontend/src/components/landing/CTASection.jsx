@@ -35,7 +35,7 @@ export default function CTASection() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-8 flex justify-center"
         >
-          <Link to="/analyze">
+          <Link to="/login">
             <Button variant="gradient" size="xl">
               Analyze Your Website
               <ArrowRight className="h-5 w-5" />

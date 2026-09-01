@@ -42,7 +42,7 @@ export default function Navbar() {
               Log in
             </Button>
           </NavLink>
-          <NavLink to="/analyze">
+          <NavLink to="/register">
             <Button variant="gradient" size="sm">
               Get Started
             </Button>
@@ -81,12 +81,12 @@ export default function Navbar() {
                 </a>
               ))}
               <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
-                <Link to="/analyze" onClick={() => setMobileOpen(false)}>
+                <Link to="/login" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full">
                     Log in
                   </Button>
                 </Link>
-                <Link to="/analyze" onClick={() => setMobileOpen(false)}>
+                <Link to="/register" onClick={() => setMobileOpen(false)}>
                   <Button variant="gradient" className="w-full">
                     Get Started
                   </Button>
