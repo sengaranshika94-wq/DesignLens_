@@ -23,7 +23,7 @@ function isTemporaryGeminiError(error) {
 
 async function generateWithFallback(request) {
     try {
-        console.log("GEMINI: trying primary model");
+        console.log("GEMINI: trying gemini-3.6-flash");
 
         const response = await ai.models.generateContent({
             model: "gemini-3.6-flash",
@@ -31,11 +31,11 @@ async function generateWithFallback(request) {
             contents: request.contents,
         });
 
-        console.log("GEMINI: primary model succeeded");
+        console.log("GEMINI: gemini-3.6-flash succeeded");
 
         return response;
     } catch (error) {
-        console.error("GEMINI: primary model failed", {
+        console.error("GEMINI: gemini-3.6-flash failed", {
             status: getErrorStatus(error),
             message: error?.message,
         });
@@ -43,18 +43,50 @@ async function generateWithFallback(request) {
         if (!isTemporaryGeminiError(error)) {
             throw error;
         }
+    }
 
-        console.log("GEMINI: trying fallback model");
+    try {
+        console.log("GEMINI: trying gemini-3.5-flash");
 
-        const fallbackResponse = await ai.models.generateContent({
+        const response = await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            config: request.config,
+            contents: request.contents,
+        });
+
+        console.log("GEMINI: gemini-3.5-flash succeeded");
+
+        return response;
+    } catch (error) {
+        console.error("GEMINI: gemini-3.5-flash failed", {
+            status: getErrorStatus(error),
+            message: error?.message,
+        });
+
+        if (!isTemporaryGeminiError(error)) {
+            throw error;
+        }
+    }
+
+    try {
+        console.log("GEMINI: trying gemini-3.5-flash-lite");
+
+        const response = await ai.models.generateContent({
             model: "gemini-3.5-flash-lite",
             config: request.config,
             contents: request.contents,
         });
 
-        console.log("GEMINI: fallback model succeeded");
+        console.log("GEMINI: gemini-3.5-flash-lite succeeded");
 
-        return fallbackResponse;
+        return response;
+    } catch (error) {
+        console.error("GEMINI: gemini-3.5-flash-lite failed", {
+            status: getErrorStatus(error),
+            message: error?.message,
+        });
+
+        throw error;
     }
 }
 

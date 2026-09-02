@@ -391,10 +391,15 @@ function AnalyzingState({ title }) {
         )}
 
         <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-          DesignLens is working through your screenshot step by step.
-          We&apos;re evaluating the visual design, UX, accessibility,
-          typography, layout, and consistency before creating your report.
-        </p>
+        DesignLens is working through your screenshot step by step.
+        We&apos;re evaluating the visual design, UX, accessibility,
+        typography, layout, and consistency before creating your report.
+      </p>
+
+      <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+        DesignLens automatically selects an available AI model. If the
+        primary model is busy, another model may be used to complete your audit.
+      </div>
 
         <div className="mt-8 w-full max-w-md space-y-3">
           {steps.map((step, index) => {
@@ -478,9 +483,6 @@ function AnalyzingState({ title }) {
         <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
           Usually takes a few seconds
-        </div>
-        <div className="mt-4 rounded-lg border border-warning/20 bg-warning/5 px-4 py-3 text-xs text-warning">
-          Please keep this page open while DesignLens completes your analysis.
         </div>
       </div>
     </div>
