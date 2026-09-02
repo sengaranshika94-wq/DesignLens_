@@ -1,7 +1,5 @@
 const ai = require("../config/gemini");
 
-const MAX_ATTEMPTS = 3;
-
 function getErrorStatus(error) {
     return (
         error?.status ||
@@ -11,7 +9,7 @@ function getErrorStatus(error) {
     );
 }
 
-function isRetryableError(error) {
+function isTemporaryGeminiError(error) {
     const status = getErrorStatus(error);
 
     return (
@@ -23,16 +21,47 @@ function isRetryableError(error) {
     );
 }
 
-function wait(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+async function generateWithFallback(request) {
+    try {
+        console.log("GEMINI: trying primary model");
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            config: request.config,
+            contents: request.contents,
+        });
+
+        console.log("GEMINI: primary model succeeded");
+
+        return response;
+    } catch (error) {
+        console.error("GEMINI: primary model failed", {
+            status: getErrorStatus(error),
+            message: error?.message,
+        });
+
+        if (!isTemporaryGeminiError(error)) {
+            throw error;
+        }
+
+        console.log("GEMINI: trying fallback model");
+
+        const fallbackResponse = await ai.models.generateContent({
+            model: "gemini-3.5-flash-lite",
+            config: request.config,
+            contents: request.contents,
+        });
+
+        console.log("GEMINI: fallback model succeeded");
+
+        return fallbackResponse;
+    }
 }
 
 async function analyzeDesign(imageBuffer, mimeType) {
     const imageBase64 = imageBuffer.toString("base64");
 
     const request = {
-        model: "gemini-3.6-flash",
-
         config: {
             responseMimeType: "application/json",
 
@@ -237,54 +266,17 @@ Do NOT infer hidden HTML, CSS, DOM structure, source code, or functionality that
 
 Return only the requested JSON structure.
 `
-    }]
+            }
+        ]
     };
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        try {
-            console.log(
-                `Gemini analysis attempt ${attempt}/${MAX_ATTEMPTS}`
-            );
+    const response = await generateWithFallback(request);
 
-            const response = await ai.models.generateContent(request);
-
-            if (!response?.text) {
-                throw new Error("Gemini returned an empty response.");
-            }
-
-            return JSON.parse(response.text);
-
-        } catch (error) {
-            const status = getErrorStatus(error);
-
-            console.error(
-                `Gemini analysis attempt ${attempt} failed.`,
-                {
-                    status,
-                    message: error?.message,
-                    name: error?.name
-                }
-            );
-
-            const shouldRetry =
-                isRetryableError(error) &&
-                attempt < MAX_ATTEMPTS;
-
-            if (!shouldRetry) {
-                throw error;
-            }
-
-            const delay = attempt * 2000;
-
-            console.log(
-                `Retrying Gemini analysis in ${delay}ms...`
-            );
-
-            await wait(delay);
-        }
+    if (!response?.text) {
+        throw new Error("Gemini returned an empty response.");
     }
 
-    throw new Error("Gemini analysis failed after all retry attempts.");
+    return JSON.parse(response.text);
 }
 
 module.exports = {
