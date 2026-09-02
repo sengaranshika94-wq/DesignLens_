@@ -72,7 +72,11 @@ export default function WebsitePreview({
       {/* Screenshot */}
       <div className="relative bg-background">
         {imageUrl ? (
-          <RealScreenshot imageUrl={imageUrl} />
+          <RealScreenshot
+            imageUrl={imageUrl}
+            showMarkers={showMarkers && scanComplete}
+            markers={safeMarkers}
+          />
         ) : (
           <FakeWebsite />
         )}
@@ -86,26 +90,29 @@ export default function WebsitePreview({
           </div>
         )}
 
-        {/* Markers */}
-        {showMarkers && scanComplete && safeMarkers.length > 0 && (
+        {/* Demo markers */}
+        {!imageUrl && showMarkers && scanComplete && (
           <div className="pointer-events-none absolute inset-0">
             <AnimatePresence>
-              {safeMarkers.map((marker, index) => {
+              {safeDemoMarkers.map((marker, index) => {
                 const x = clamp(
                   Number(marker.position.x),
-                  0,
-                  100
+                  2,
+                  98
                 );
 
                 const y = clamp(
                   Number(marker.position.y),
-                  0,
-                  100
+                  2,
+                  98
                 );
 
                 const color =
                   marker.color ||
                   getSeverityColor(marker.severity);
+
+                const labelOnLeft = x > 75;
+                const labelAbove = y > 80;
 
                 return (
                   <motion.div
@@ -130,7 +137,6 @@ export default function WebsitePreview({
                       top: `${y}%`,
                     }}
                   >
-                    {/* Marker */}
                     <div
                       className="h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-background shadow-lg"
                       style={{
@@ -139,9 +145,18 @@ export default function WebsitePreview({
                       }}
                     />
 
-                    {/* Label */}
                     <div
-                      className="absolute left-3 top-3 max-w-[220px] whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[10px] font-medium shadow-lg backdrop-blur-md"
+                      className={cn(
+                        'absolute max-w-[220px] rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium shadow-lg backdrop-blur-md',
+                        'whitespace-nowrap',
+                        labelOnLeft
+                          ? 'right-3'
+                          : 'left-3',
+                        labelAbove
+                          ? 'bottom-3'
+                          : 'top-3'
+                      )}
                       style={{
                         background: `${color}18`,
                         borderColor: `${color}55`,
@@ -161,14 +176,104 @@ export default function WebsitePreview({
   );
 }
 
-function RealScreenshot({ imageUrl }) {
+function RealScreenshot({
+  imageUrl,
+  showMarkers = false,
+  markers = [],
+}) {
   return (
     <div className="flex max-h-[760px] justify-center overflow-auto bg-secondary/20 p-2 sm:p-4">
-      <img
-        src={imageUrl}
-        alt="Uploaded website design"
-        className="block h-auto max-h-[720px] w-full object-contain"
-      />
+      <div className="relative inline-block max-w-full">
+        <img
+          src={imageUrl}
+          alt="Uploaded website design"
+          className="block h-auto max-h-[720px] max-w-full object-contain"
+        />
+
+        {/* Real marker layer */}
+        {showMarkers && markers.length > 0 && (
+          <div className="pointer-events-none absolute inset-0">
+            <AnimatePresence>
+              {markers.map((marker, index) => {
+                const x = clamp(
+                  Number(marker.position.x),
+                  2,
+                  98
+                );
+
+                const y = clamp(
+                  Number(marker.position.y),
+                  2,
+                  98
+                );
+
+                const color =
+                  marker.color ||
+                  getSeverityColor(marker.severity);
+
+                const labelOnLeft = x > 75;
+                const labelAbove = y > 80;
+
+                return (
+                  <motion.div
+                    key={`${marker.label}-${index}`}
+                    initial={{
+                      opacity: 0,
+                      scale: 0.7,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                    }}
+                    transition={{
+                      delay: index * 0.15,
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 20,
+                    }}
+                    className="absolute"
+                    style={{
+                      left: `${x}%`,
+                      top: `${y}%`,
+                    }}
+                  >
+                    {/* Marker dot */}
+                    <div
+                      className="h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-background shadow-lg"
+                      style={{
+                        borderColor: color,
+                        boxShadow: `0 0 0 5px ${color}30`,
+                      }}
+                    />
+
+                    {/* Marker label */}
+                    <div
+                      className={cn(
+                        'absolute max-w-[220px] rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium shadow-lg backdrop-blur-md',
+                        'whitespace-nowrap',
+                        labelOnLeft
+                          ? 'right-3'
+                          : 'left-3',
+                        labelAbove
+                          ? 'bottom-3'
+                          : 'top-3'
+                      )}
+                      style={{
+                        background: `${color}18`,
+                        borderColor: `${color}55`,
+                        color,
+                      }}
+                    >
+                      {marker.label}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -201,47 +306,49 @@ const defaultMarkers = [
     label: 'Poor contrast',
     color: '#ef4444',
     position: {
-      top: '14%',
-      left: '48%',
+      x: 48,
+      y: 14,
     },
   },
   {
     label: 'CTA placement',
     color: '#f59e0b',
     position: {
-      top: '30%',
-      left: '20%',
+      x: 20,
+      y: 30,
     },
   },
   {
     label: 'Typography',
     color: '#0ea5e9',
     position: {
-      top: '52%',
-      left: '55%',
+      x: 55,
+      y: 52,
     },
   },
   {
     label: 'Spacing',
     color: '#a855f7',
     position: {
-      top: '68%',
-      left: '18%',
+      x: 18,
+      y: 68,
     },
   },
   {
     label: 'Accessibility',
     color: '#22c55e',
     position: {
-      top: '84%',
-      left: '60%',
+      x: 60,
+      y: 84,
     },
   },
 ];
 
+const safeDemoMarkers = defaultMarkers;
+
 function FakeWebsite() {
   return (
-    <div className="bg-background">
+    <div className="relative bg-background">
       {/* Nav */}
       <div className="flex items-center justify-between border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">

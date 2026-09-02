@@ -17,6 +17,7 @@ import { createDesign } from '@/services/designService';
 import { analyzeDesign } from '@/services/analysisService';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils'; 
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -69,6 +70,21 @@ export default function AnalyzePage() {
 
     setSelectedFile(file);
   };
+
+  useEffect(() => {
+  if (!isAnalyzing) return;
+
+  const handleBeforeUnload = (event) => {
+    event.preventDefault();
+    event.returnValue = '';
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+    }, [isAnalyzing]);
 
   const handleAnalyze = async () => {
     const trimmedTitle = title.trim();
@@ -461,6 +477,9 @@ function AnalyzingState({ title }) {
         <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
           Usually takes a few seconds
+        </div>
+        <div className="mt-4 rounded-lg border border-warning/20 bg-warning/5 px-4 py-3 text-xs text-warning">
+          Please keep this page open while DesignLens completes your analysis.
         </div>
       </div>
     </div>

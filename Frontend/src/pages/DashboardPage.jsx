@@ -77,7 +77,7 @@ export default function DashboardPage() {
           new Date(b.createdAt || 0) -
           new Date(a.createdAt || 0)
       )
-      .slice(0, 5);
+      .slice(0, 6);
   }, [analyses]);
 
   /*
@@ -97,7 +97,7 @@ export default function DashboardPage() {
           new Date(a.createdAt || 0) -
           new Date(b.createdAt || 0)
       )
-      .slice(-6);
+      .slice(-7);
   }, [analyses]);
 
   /*
@@ -317,7 +317,7 @@ export default function DashboardPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {/* Recent analyses */}
         <div className="lg:col-span-2">
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden h-full">
             <div className="flex items-center justify-between border-b border-border p-5">
               <div>
                 <h2 className="text-base font-semibold text-foreground">
@@ -572,7 +572,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right column */}
-        <div className="space-y-6">
+        <div className="flex h-full flex-col gap-6">
           {/* Quick action */}
           <Card className="overflow-hidden">
             <div className="relative bg-gradient-to-br from-primary/10 to-cyan-400/5 p-6">
@@ -612,7 +612,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Score trend */}
-          <Card className="p-5">
+          <Card className="flex-1 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">

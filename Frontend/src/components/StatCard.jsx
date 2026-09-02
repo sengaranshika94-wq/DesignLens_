@@ -42,14 +42,18 @@ export default function StatCard({
           {trend && (
             <div
               className={cn(
-                'flex items-center gap-1 text-xs font-medium',
-                trendDirection === 'up' ? 'text-success' : trendDirection === 'down' ? 'text-destructive' : 'text-muted-foreground'
+                'flex max-w-[145px] items-center gap-1 text-right text-xs font-medium leading-4',
+                trendDirection === 'up'
+                  ? 'text-success'
+                  : trendDirection === 'down'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
               )}
             >
-              <TrendIcon className="h-3 w-3" />
-              {trend}
-            </div>
-          )}
+    <TrendIcon className="h-4 w-4 shrink-0" />
+    <span>{trend}</span>
+  </div>
+)}
         </div>
         <div className="mt-4">
           <div className="text-3xl font-bold tabular-nums text-foreground">
