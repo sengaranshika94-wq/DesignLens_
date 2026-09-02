@@ -1,9 +1,36 @@
 const ai = require("../config/gemini");
 
+const MAX_ATTEMPTS = 3;
+
+function getErrorStatus(error) {
+    return (
+        error?.status ||
+        error?.response?.status ||
+        error?.error?.code ||
+        null
+    );
+}
+
+function isRetryableError(error) {
+    const status = getErrorStatus(error);
+
+    return (
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504
+    );
+}
+
+function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function analyzeDesign(imageBuffer, mimeType) {
     const imageBase64 = imageBuffer.toString("base64");
 
-    const response = await ai.models.generateContent({
+    const request = {
         model: "gemini-3.6-flash",
 
         config: {
@@ -210,11 +237,54 @@ Do NOT infer hidden HTML, CSS, DOM structure, source code, or functionality that
 
 Return only the requested JSON structure.
 `
-            }
         ]
-    });
+    };
 
-    return JSON.parse(response.text);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            console.log(
+                `Gemini analysis attempt ${attempt}/${MAX_ATTEMPTS}`
+            );
+
+            const response = await ai.models.generateContent(request);
+
+            if (!response?.text) {
+                throw new Error("Gemini returned an empty response.");
+            }
+
+            return JSON.parse(response.text);
+
+        } catch (error) {
+            const status = getErrorStatus(error);
+
+            console.error(
+                `Gemini analysis attempt ${attempt} failed.`,
+                {
+                    status,
+                    message: error?.message,
+                    name: error?.name
+                }
+            );
+
+            const shouldRetry =
+                isRetryableError(error) &&
+                attempt < MAX_ATTEMPTS;
+
+            if (!shouldRetry) {
+                throw error;
+            }
+
+            const delay = attempt * 2000;
+
+            console.log(
+                `Retrying Gemini analysis in ${delay}ms...`
+            );
+
+            await wait(delay);
+        }
+    }
+
+    throw new Error("Gemini analysis failed after all retry attempts.");
 }
 
 module.exports = {
