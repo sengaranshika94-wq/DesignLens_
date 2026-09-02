@@ -69,19 +69,23 @@ async function analyzeDesignController(req, res) {
         })
 
     } catch (err) {
-        console.error("ANALYSIS ERROR:", err)
+    console.error("ANALYSIS ERROR:", err)
+    console.error("ERROR MESSAGE:", err.message)
+    console.error("ERROR STACK:", err.stack)
 
-         // If the analysis fails, mark the design as failed
-        if (req.params.designId) {
-            await designModel.findByIdAndUpdate(
-                req.params.designId,
-                { status: "failed" }
-            )
-        }
-        return res.status(500).json({
-            message: "Failed to analyze design"
-        })
+    // If the analysis fails, mark the design as failed
+    if (req.params.designId) {
+        await designModel.findByIdAndUpdate(
+            req.params.designId,
+            { status: "failed" }
+        )
     }
+
+    return res.status(500).json({
+        message: "Failed to analyze design",
+        error: err.message
+    })
+}
 }
 
 // Fetches one saved analysis by its ID and makes sure it belongs to the logged-in user.
