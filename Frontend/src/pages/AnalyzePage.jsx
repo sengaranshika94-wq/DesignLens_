@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -17,6 +16,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { createDesign } from '@/services/designService';
 import { analyzeDesign } from '@/services/analysisService';
 import { useAuth } from '@/context/AuthContext';
+import { useEffect, useState } from 'react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -315,6 +315,8 @@ export default function AnalyzePage() {
 }
 
 function AnalyzingState({ title }) {
+  const [activeStep, setActiveStep] = useState(0);
+
   const steps = [
     {
       label: 'Uploading screenshot',
@@ -333,6 +335,18 @@ function AnalyzingState({ title }) {
       description: 'Preparing your personalized audit',
     },
   ];
+
+  useEffect(() => {
+    const timers = [
+      window.setTimeout(() => setActiveStep(1), 2500),
+      window.setTimeout(() => setActiveStep(2), 5500),
+      window.setTimeout(() => setActiveStep(3), 10000),
+    ];
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
 
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-12 sm:px-8 sm:py-16">
@@ -360,43 +374,93 @@ function AnalyzingState({ title }) {
         )}
 
         <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-          DesignLens is evaluating your screenshot and generating an
-          AI-powered design audit. This may take a little while.
+          DesignLens is working through your screenshot step by step.
+          We&apos;re evaluating the visual design, UX, accessibility,
+          typography, layout, and consistency before creating your report.
         </p>
 
         <div className="mt-8 w-full max-w-md space-y-3">
-          {steps.map((step, index) => (
-            <motion.div
-              key={step.label}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.15 }}
-              className="flex items-start gap-3 rounded-xl border border-border/70 bg-card/80 p-3 text-left"
-            >
+          {steps.map((step, index) => {
+            const isComplete = index < activeStep;
+            const isActive = index === activeStep;
+            const isPending = index > activeStep;
+
+            return (
               <motion.div
+                key={step.label}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{
-                  scale: [1, 1.15, 1],
-                  opacity: [0.65, 1, 0.65],
+                  opacity: 1,
+                  y: 0,
                 }}
                 transition={{
-                  duration: 1.4,
-                  repeat: Infinity,
-                  delay: index * 0.25,
+                  delay: index * 0.12,
                 }}
-                className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
-              />
+                className={cn(
+                  'flex items-start gap-3 rounded-xl border p-3 text-left transition-all',
+                  isActive
+                    ? 'border-primary/30 bg-primary/10'
+                    : isComplete
+                    ? 'border-success/20 bg-success/5'
+                    : 'border-border/70 bg-card/70'
+                )}
+              >
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center">
+                  {isComplete ? (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-success/15">
+                      <span className="text-xs font-bold text-success">
+                        ✓
+                      </span>
+                    </div>
+                  ) : isActive ? (
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.15, 1],
+                        opacity: [0.6, 1, 0.6],
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                      }}
+                      className="h-2.5 w-2.5 rounded-full bg-primary"
+                    />
+                  ) : (
+                    <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+                  )}
+                </div>
 
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">
-                  {step.label}
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={cn(
+                        'text-sm font-medium',
+                        isPending
+                          ? 'text-muted-foreground'
+                          : 'text-foreground'
+                      )}
+                    >
+                      {step.label}
+                    </p>
 
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                    {isActive && (
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-primary">
+                        Working
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                    {step.description}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+          Usually takes a few seconds
         </div>
       </div>
     </div>

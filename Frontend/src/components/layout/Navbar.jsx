@@ -11,7 +11,7 @@ const navLinks = [
   { label: 'Product', href: '/#product' },
   { label: 'How it Works', href: '/#how-it-works' },
   { label: 'Features', href: '/#features' },
-  { label: 'Pricing', href: '/#pricing' },
+  { label: 'Plans', href: '/#plans' },
 ];
 
 export default function Navbar() {

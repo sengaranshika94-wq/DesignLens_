@@ -2,50 +2,57 @@ import { motion } from 'framer-motion';
 import { Check, Sparkles } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const plans = [
   {
-    name: 'Starter',
-    price: '$0',
-    period: '/mo',
-    description: 'Perfect for trying out DesignLens.',
-    features: ['5 analyses per month', 'Basic scoring', '1 user'],
-    cta: 'Get Started',
+    name: 'Free',
+    price: 'Free',
+    period: '',
+    description: 'Explore AI-powered design auditing.',
+    features: [
+      'AI visual analysis',
+      'Overall & category scores',
+      'Visual issue markers',
+      'Actionable recommendations',
+    ],
+    cta: 'Start Auditing',
     highlighted: false,
   },
   {
     name: 'Pro',
-    price: '$19',
-    period: '/mo',
-    description: 'For freelancers and small teams.',
+    price: 'Pro',
+    period: '',
+    description: 'For designers who want deeper insights.',
     features: [
-      'Unlimited analyses',
-      'Full AI insights',
-      'History & comparisons',
-      'Priority processing',
+      'Everything in Free',
+      'Detailed AI insights',
+      'Advanced accessibility review',
+      'Exportable reports',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Coming Soon',
     highlighted: true,
   },
   {
     name: 'Team',
-    price: '$49',
-    period: '/mo',
-    description: 'For agencies and growing teams.',
+    price: 'Team',
+    period: '',
+    description: 'For agencies and collaborative teams.',
     features: [
       'Everything in Pro',
-      '5 team members',
-      'Shared history',
-      'API access',
+      'Shared design reviews',
+      'Team analysis history',
+      'Team-level insights',
     ],
-    cta: 'Contact Sales',
+    cta: 'Coming Soon',
     highlighted: false,
   },
 ];
 
 export default function Pricing() {
+  const navigate = useNavigate();
   return (
-    <section id="pricing" className="relative border-b border-border py-20 lg:py-28">
+    <section id="plans" className="relative border-b border-border py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <motion.h2
@@ -55,7 +62,7 @@ export default function Pricing() {
             transition={{ duration: 0.5 }}
             className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
           >
-            Simple, transparent pricing
+            Choose how you audit
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -98,6 +105,11 @@ export default function Pricing() {
               <Button
                 variant={plan.highlighted ? 'gradient' : 'outline'}
                 className="mt-5 w-full"
+                onClick={() => {
+                  if (plan.name === 'Free') {
+                    navigate('/register');
+                  }
+                }}
               >
                 {plan.cta}
               </Button>
