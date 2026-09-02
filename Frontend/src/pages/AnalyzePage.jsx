@@ -144,10 +144,11 @@ export default function AnalyzePage() {
       console.error('ANALYSIS FLOW ERROR:', err);
 
       setError(
+        err.response?.data?.error ||
         err.response?.data?.message ||
-          err.message ||
-          'Something went wrong while analyzing your design.'
-      );
+        err.message ||
+        'Something went wrong while analyzing your design.'
+    );
 
       setIsAnalyzing(false);
     }

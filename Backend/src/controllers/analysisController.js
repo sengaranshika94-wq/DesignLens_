@@ -69,22 +69,21 @@ async function analyzeDesignController(req, res) {
         })
 
     } catch (err) {
-    console.error("ANALYSIS ERROR:", err)
-    console.error("ERROR MESSAGE:", err.message)
-    console.error("ERROR STACK:", err.stack)
+    console.error("ANALYSIS ERROR:", err);
 
     // If the analysis fails, mark the design as failed
     if (req.params.designId) {
         await designModel.findByIdAndUpdate(
             req.params.designId,
             { status: "failed" }
-        )
+        );
     }
 
     return res.status(500).json({
         message: "Failed to analyze design",
-        error: err.message
-    })
+        error: err?.message || String(err),
+        status: err?.status || err?.response?.status || null
+    });
 }
 }
 
