@@ -237,7 +237,7 @@ Do NOT infer hidden HTML, CSS, DOM structure, source code, or functionality that
 
 Return only the requested JSON structure.
 `
-        ]
+    }]
     };
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
