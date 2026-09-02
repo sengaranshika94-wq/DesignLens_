@@ -147,9 +147,9 @@ export default function WebsitePreview({
 
                     <div
                       className={cn(
-                        'absolute max-w-[220px] rounded-lg border px-2.5 py-1.5',
-                        'text-[10px] font-medium shadow-lg backdrop-blur-md',
-                        'whitespace-nowrap',
+                        'absolute w-max max-w-[180px] rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium leading-4 shadow-lg backdrop-blur-md',
+                        'break-words whitespace-normal',
                         labelOnLeft
                           ? 'right-3'
                           : 'left-3',
@@ -158,13 +158,13 @@ export default function WebsitePreview({
                           : 'top-3'
                       )}
                       style={{
-                        background: `${color}18`,
-                        borderColor: `${color}55`,
+                        background: `${color}22`,
+                        borderColor: `${color}66`,
                         color,
                       }}
                     >
-                      {marker.label}
-                    </div>
+                    {marker.label}
+                  </div>
                   </motion.div>
                 );
               })}
@@ -248,10 +248,10 @@ function RealScreenshot({
 
                     {/* Marker label */}
                     <div
-                      className={cn(
-                        'absolute max-w-[220px] rounded-lg border px-2.5 py-1.5',
-                        'text-[10px] font-medium shadow-lg backdrop-blur-md',
-                        'whitespace-nowrap',
+                       className={cn(
+                        'absolute w-max max-w-[180px] rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium leading-4 shadow-lg backdrop-blur-md',
+                        'break-words whitespace-normal',
                         labelOnLeft
                           ? 'right-3'
                           : 'left-3',
@@ -260,10 +260,10 @@ function RealScreenshot({
                           : 'top-3'
                       )}
                       style={{
-                        background: `${color}18`,
-                        borderColor: `${color}55`,
-                        color,
-                      }}
+                      background: `${color}22`,
+                      borderColor: `${color}66`,
+                      color,
+                    }}
                     >
                       {marker.label}
                     </div>

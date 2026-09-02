@@ -276,7 +276,34 @@ Return only the requested JSON structure.
         throw new Error("Gemini returned an empty response.");
     }
 
-    return JSON.parse(response.text);
+    const parsed = JSON.parse(response.text);
+
+if (Array.isArray(parsed.issues)) {
+    parsed.issues = parsed.issues.map((issue) => {
+        const x = Number(issue?.position?.x);
+        const y = Number(issue?.position?.y);
+
+        const hasValidPosition =
+            Number.isFinite(x) &&
+            Number.isFinite(y);
+
+        return {
+            ...issue,
+            position: hasValidPosition
+                ? {
+                    x: Math.min(Math.max(x, 2), 98),
+                    y: Math.min(Math.max(y, 2), 98),
+                }
+                : {
+                    x: 50,
+                    y: 50,
+                },
+        };
+    });
+}
+
+return parsed;
+   
 }
 
 module.exports = {
