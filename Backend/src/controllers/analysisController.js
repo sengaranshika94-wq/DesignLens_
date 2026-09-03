@@ -79,11 +79,19 @@ async function analyzeDesignController(req, res) {
         );
     }
 
-    return res.status(500).json({
-        message: "Failed to analyze design",
-        error: err?.message || String(err),
-        status: err?.status || err?.response?.status || null
+    if (err?.code === "AI_TEMPORARILY_UNAVAILABLE") {
+    return res.status(503).json({
+        success: false,
+        code: "AI_TEMPORARILY_UNAVAILABLE",
+        message: "AI analysis is temporarily unavailable. Please try again."
     });
+}
+
+return res.status(500).json({
+    success: false,
+    code: "ANALYSIS_FAILED",
+    message: "We couldn't complete the design analysis. Please try again."
+});
 }
 }
 

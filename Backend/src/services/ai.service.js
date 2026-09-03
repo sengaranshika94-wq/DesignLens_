@@ -22,72 +22,61 @@ function isTemporaryGeminiError(error) {
 }
 
 async function generateWithFallback(request) {
-    try {
-        console.log("GEMINI: trying gemini-3.6-flash");
+    const models = [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite"
+    ];
 
-        const response = await ai.models.generateContent({
-            model: "gemini-3.6-flash",
-            config: request.config,
-            contents: request.contents,
-        });
+    let lastError = null;
 
-        console.log("GEMINI: gemini-3.6-flash succeeded");
+    for (const model of models) {
+        try {
+            console.log(`GEMINI: trying ${model}`);
 
-        return response;
-    } catch (error) {
-        console.error("GEMINI: gemini-3.6-flash failed", {
-            status: getErrorStatus(error),
-            message: error?.message,
-        });
+            const response = await ai.models.generateContent({
+                model,
+                config: request.config,
+                contents: request.contents,
+            });
 
-        if (!isTemporaryGeminiError(error)) {
-            throw error;
+            console.log(`GEMINI: ${model} succeeded`);
+
+            return response;
+
+        } catch (error) {
+            lastError = error;
+
+            console.error(`GEMINI: ${model} failed`, {
+                status: getErrorStatus(error),
+                message: error?.message,
+            });
+
+            // If the error is not temporary,
+            // don't try another model.
+            if (!isTemporaryGeminiError(error)) {
+                throw error;
+            }
+
+            // Small delay before trying the next model
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
     }
 
-    try {
-        console.log("GEMINI: trying gemini-3.5-flash");
+    // All fallback models failed.
+    // Create our own safe error instead of exposing
+    // Gemini's raw error to the frontend.
+    const fallbackError = new Error(
+        "AI analysis is temporarily unavailable."
+    );
 
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            config: request.config,
-            contents: request.contents,
-        });
+    fallbackError.status = 503;
+    fallbackError.code = "AI_TEMPORARILY_UNAVAILABLE";
 
-        console.log("GEMINI: gemini-3.5-flash succeeded");
+    // Keep original error for backend debugging only
+    fallbackError.cause = lastError;
 
-        return response;
-    } catch (error) {
-        console.error("GEMINI: gemini-3.5-flash failed", {
-            status: getErrorStatus(error),
-            message: error?.message,
-        });
-
-        if (!isTemporaryGeminiError(error)) {
-            throw error;
-        }
-    }
-
-    try {
-        console.log("GEMINI: trying gemini-3.5-flash-lite");
-
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash-lite",
-            config: request.config,
-            contents: request.contents,
-        });
-
-        console.log("GEMINI: gemini-3.5-flash-lite succeeded");
-
-        return response;
-    } catch (error) {
-        console.error("GEMINI: gemini-3.5-flash-lite failed", {
-            status: getErrorStatus(error),
-            message: error?.message,
-        });
-
-        throw error;
-    }
+    throw fallbackError;
 }
 
 async function analyzeDesign(imageBuffer, mimeType) {
