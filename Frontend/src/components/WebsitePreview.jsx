@@ -107,8 +107,7 @@ export default function WebsitePreview({
                   marker.color ||
                   getSeverityColor(marker.severity);
 
-                const labelOnLeft = x > 75;
-                const labelAbove = y > 80;
+                const placement = getLabelPlacement(x, y);
 
                 return (
                   <motion.div
@@ -133,6 +132,7 @@ export default function WebsitePreview({
                       top: `${y}%`,
                     }}
                   >
+                    {/* Marker dot */}
                     <div
                       className="h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-background shadow-lg"
                       style={{
@@ -141,17 +141,18 @@ export default function WebsitePreview({
                       }}
                     />
 
+                    {/* Marker label */}
                     <div
                       className={cn(
-                        'absolute w-max max-w-[180px] rounded-lg border px-2.5 py-1.5',
-                        'text-[10px] font-medium leading-4 shadow-lg backdrop-blur-md',
+                        'absolute z-20 w-max max-w-[190px]',
+                        'rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium leading-4',
+                        'shadow-lg backdrop-blur-md',
                         'break-words whitespace-normal',
-                        labelOnLeft
-                          ? 'right-3'
-                          : 'left-3',
-                        labelAbove
-                          ? 'bottom-3'
-                          : 'top-3'
+                        getLabelClasses(
+                          placement.horizontal,
+                          placement.vertical
+                        )
                       )}
                       style={{
                         background: `${color}22`,
@@ -159,8 +160,8 @@ export default function WebsitePreview({
                         color,
                       }}
                     >
-                    {marker.label}
-                  </div>
+                      {marker.label}
+                    </div>
                   </motion.div>
                 );
               })}
@@ -171,6 +172,7 @@ export default function WebsitePreview({
     </div>
   );
 }
+
 
 function RealScreenshot({
   imageUrl,
@@ -207,8 +209,7 @@ function RealScreenshot({
                   marker.color ||
                   getSeverityColor(marker.severity);
 
-                const labelOnLeft = x > 75;
-                const labelAbove = y > 80;
+                const placement = getLabelPlacement(x, y);
 
                 return (
                   <motion.div
@@ -244,22 +245,22 @@ function RealScreenshot({
 
                     {/* Marker label */}
                     <div
-                       className={cn(
-                        'absolute w-max max-w-[180px] rounded-lg border px-2.5 py-1.5',
-                        'text-[10px] font-medium leading-4 shadow-lg backdrop-blur-md',
+                      className={cn(
+                        'absolute z-20 w-max max-w-[190px]',
+                        'rounded-lg border px-2.5 py-1.5',
+                        'text-[10px] font-medium leading-4',
+                        'shadow-lg backdrop-blur-md',
                         'break-words whitespace-normal',
-                        labelOnLeft
-                          ? 'right-3'
-                          : 'left-3',
-                        labelAbove
-                          ? 'bottom-3'
-                          : 'top-3'
+                        getLabelClasses(
+                          placement.horizontal,
+                          placement.vertical
+                        )
                       )}
                       style={{
-                      background: `${color}22`,
-                      borderColor: `${color}66`,
-                      color,
-                    }}
+                        background: `${color}22`,
+                        borderColor: `${color}66`,
+                        color,
+                      }}
                     >
                       {marker.label}
                     </div>
@@ -273,6 +274,106 @@ function RealScreenshot({
     </div>
   );
 }
+
+
+/*
+ * Decides which direction the marker label should appear.
+ *
+ * The marker dot always stays at the AI-provided position.
+ * Only the label is moved to avoid going outside the screenshot.
+ */
+function getLabelPlacement(x, y) {
+  // Bottom-right corner
+  if (x > 75 && y > 70) {
+    return {
+      horizontal: 'right',
+      vertical: 'bottom',
+    };
+  }
+
+  // Bottom-left corner
+  if (x < 25 && y > 70) {
+    return {
+      horizontal: 'left',
+      vertical: 'bottom',
+    };
+  }
+
+  // Top-right corner
+  if (x > 75 && y < 30) {
+    return {
+      horizontal: 'right',
+      vertical: 'top',
+    };
+  }
+
+  // Top-left corner
+  if (x < 25 && y < 30) {
+    return {
+      horizontal: 'left',
+      vertical: 'top',
+    };
+  }
+
+  // Right side
+  if (x > 65) {
+    return {
+      horizontal: 'right',
+      vertical: 'center',
+    };
+  }
+
+  // Left side
+  if (x < 35) {
+    return {
+      horizontal: 'left',
+      vertical: 'center',
+    };
+  }
+
+  // Bottom center
+  if (y > 70) {
+    return {
+      horizontal: 'center',
+      vertical: 'bottom',
+    };
+  }
+
+  // Top center
+  if (y < 30) {
+    return {
+      horizontal: 'center',
+      vertical: 'top',
+    };
+  }
+
+  // Center
+  return {
+    horizontal: 'center',
+    vertical: 'top',
+  };
+}
+
+
+/*
+ * Converts the placement decision into Tailwind classes.
+ */
+function getLabelClasses(horizontal, vertical) {
+  const horizontalClass = {
+    left: 'left-3',
+    right: 'right-3',
+    center: 'left-1/2 -translate-x-1/2',
+  }[horizontal];
+
+  const verticalClass = {
+    top: 'top-3',
+    bottom: 'bottom-3',
+    center: 'top-1/2 -translate-y-1/2',
+  }[vertical];
+
+  return `${horizontalClass} ${verticalClass}`;
+}
+
 
 function getSeverityColor(severity) {
   switch (severity?.toLowerCase()) {
@@ -290,6 +391,7 @@ function getSeverityColor(severity) {
   }
 }
 
+
 function normalizeMarker(marker) {
   if (!marker?.position) {
     return null;
@@ -298,6 +400,7 @@ function normalizeMarker(marker) {
   const x = parsePosition(
     marker.position.x ?? marker.position.left
   );
+
   const y = parsePosition(
     marker.position.y ?? marker.position.top
   );
@@ -315,13 +418,17 @@ function normalizeMarker(marker) {
   };
 }
 
+
 function parsePosition(value) {
   if (typeof value === 'string') {
-    return Number(value.trim().replace('%', ''));
+    return Number(
+      value.trim().replace('%', '')
+    );
   }
 
   return Number(value);
 }
+
 
 function clamp(value, min, max) {
   return Math.min(
@@ -329,6 +436,7 @@ function clamp(value, min, max) {
     max
   );
 }
+
 
 const defaultMarkers = [
   {
@@ -373,7 +481,9 @@ const defaultMarkers = [
   },
 ];
 
+
 const safeDemoMarkers = defaultMarkers;
+
 
 function FakeWebsite() {
   return (
