@@ -84,6 +84,7 @@ async function analyzeDesign(imageBuffer, mimeType) {
 
     const request = {
         config: {
+            temperature: 0.1,
             responseMimeType: "application/json",
 
             responseSchema: {
@@ -232,61 +233,135 @@ async function analyzeDesign(imageBuffer, mimeType) {
 
             {
                 text: `
-You are a professional UI/UX design reviewer performing a visual audit of a website screenshot.
+            You are an expert UI/UX auditor analyzing a website screenshot.
 
-Analyze ONLY what can be visually observed in the screenshot.
+            IMPORTANT:
+            Analyze ONLY what is visibly present in the screenshot.
+            Do not infer HTML, CSS, DOM structure, JavaScript, hidden functionality, or code.
 
-Evaluate these six dimensions:
-- visualDesign
-- ux
-- accessibility
-- typography
-- layout
-- consistency
+            Evaluate these six dimensions:
+            - visualDesign
+            - ux
+            - accessibility
+            - typography
+            - layout
+            - consistency
 
-Give each category a score from 0 to 100.
+            Give each category a score from 0 to 100.
 
-Calculate the overallScore as a reasonable weighted overall assessment of these six category scores.
+            Calculate overallScore as a reasonable weighted assessment of the six category scores.
 
-Also provide:
-1. A concise summary of the overall design quality.
-2. A list of genuine strengths.
-3. A list of the most important issues.
+            Provide:
+            1. A concise summary.
+            2. Genuine strengths.
+            3. Genuine, actionable issues.
 
-For every issue provide:
-- category
-- severity: "high", "medium", or "low"
-- title
-- description
-- whyItMatters
-- recommendation
+            ISSUE RULES:
 
-IMPORTANT FOR ISSUE POSITIONS:
+            Only report issues that are clearly visible in the screenshot.
 
-For every issue, identify the approximate visual location of the issue inside the screenshot.
+            Prefer 4 to 8 high-value issues rather than many minor issues.
 
-Return the position as normalized percentages:
-- x = horizontal position from the LEFT edge, from 0 to 100
-- y = vertical position from the TOP edge, from 0 to 100
+            Every issue must be UNIQUE.
 
-Examples:
-- top-left area = x: 20, y: 20
-- center = x: 50, y: 50
-- bottom-right = x: 80, y: 80
+            DO NOT report the same visual problem multiple times for different nearby elements unless the problems are genuinely different.
 
-The position must refer to the actual visible area where the issue occurs.
+            For example, if several pieces of text have low contrast, report the most important/representative instance instead of creating many duplicate "low contrast" issues.
 
-Do NOT invent exact coordinates when an issue cannot be localized visually.
+            For every issue provide:
+            - category
+            - severity: "high", "medium", or "low"
+            - title
+            - description
+            - whyItMatters
+            - recommendation
+            - position
 
-For issues that affect a specific visible element, place the marker near that element.
-For issues that apply to a broader area, place the marker near the center of the affected area.
+            POSITION RULES — VERY IMPORTANT:
 
-Do NOT create strengths just to fill space.
-Do NOT create issues that are not visually supported by the screenshot.
-Do NOT infer hidden HTML, CSS, DOM structure, source code, or functionality that cannot be determined visually.
+            The position represents the exact visual location of the problem in the screenshot.
 
-Return only the requested JSON structure.
-`
+            Use normalized percentages.
+
+            x:
+            - 0 = extreme LEFT edge
+            - 50 = horizontal CENTER
+            - 100 = extreme RIGHT edge
+
+            y:
+            - 0 = extreme TOP edge
+            - 50 = vertical CENTER
+            - 100 = extreme BOTTOM edge
+
+            The coordinate MUST point to the actual UI element or visual region causing the issue.
+
+            DO NOT place a marker at the center of the screenshot unless the actual problem is located there.
+
+            DO NOT use a generic or arbitrary position.
+
+            For text-related issues:
+            Place the marker directly over or immediately beside the problematic text.
+
+            For button-related issues:
+            Place the marker over the problematic button.
+
+            For image-related issues:
+            Place the marker over the problematic image.
+
+            For spacing/layout issues:
+            Place the marker near the actual spacing or alignment problem.
+
+            For navigation/header issues:
+            Place the marker on the affected navigation/header area.
+
+            For issues affecting a broad section:
+            Place the marker near the center of that affected section.
+
+            IMPORTANT COORDINATE CALIBRATION:
+
+            Before choosing x and y, mentally divide the screenshot into a 10 × 10 grid.
+
+            Determine:
+            1. Which horizontal section contains the problem.
+            2. Which vertical section contains the problem.
+            3. The approximate center of the actual problematic element.
+
+            Then convert that location to percentages.
+
+            For example:
+            - search bar near the top-left → approximately x: 20, y: 15
+            - center card → approximately x: 50, y: 55
+            - bottom-right floating button → approximately x: 92, y: 94
+
+            These are ONLY examples.
+            Always calculate coordinates from the actual screenshot.
+
+            The coordinate must describe the screenshot itself, not the position where the issue label should appear.
+
+            Do NOT move coordinates to make room for the label.
+
+            Do NOT invent exact pixel-level precision.
+            Approximate visual coordinates are acceptable, but they must correspond to the actual visible element.
+
+            QUALITY RULES:
+
+            Do not create strengths just to fill space.
+
+            Do not create issues that are not visually supported.
+
+            Do not repeat the same issue.
+
+            Prioritize issues that materially affect:
+            - readability
+            - accessibility
+            - usability
+            - hierarchy
+            - layout
+            - consistency
+            - visual quality
+
+            Return ONLY the requested JSON structure.
+            `
             }
         ]
     };
@@ -300,27 +375,37 @@ Return only the requested JSON structure.
     const parsed = JSON.parse(response.text);
 
 if (Array.isArray(parsed.issues)) {
-    parsed.issues = parsed.issues.map((issue) => {
-        const x = Number(issue?.position?.x);
-        const y = Number(issue?.position?.y);
+    parsed.issues = parsed.issues
+        .map((issue) => {
+            const x = Number(issue?.position?.x);
+            const y = Number(issue?.position?.y);
 
-        const hasValidPosition =
-            Number.isFinite(x) &&
-            Number.isFinite(y);
+            const hasValidPosition =
+                Number.isFinite(x) &&
+                Number.isFinite(y) &&
+                x >= 0 &&
+                x <= 100 &&
+                y >= 0 &&
+                y <= 100;
 
-        return {
-            ...issue,
-            position: hasValidPosition
-                ? {
-                    x: Math.min(Math.max(x, 2), 98),
-                    y: Math.min(Math.max(y, 2), 98),
-                }
-                : {
-                    x: 50,
-                    y: 50,
+            if (!hasValidPosition) {
+                console.warn(
+                    "AI issue removed because of invalid position:",
+                    issue?.title
+                );
+
+                return null;
+            }
+
+            return {
+                ...issue,
+                position: {
+                    x: Math.min(Math.max(x, 0), 100),
+                    y: Math.min(Math.max(y, 0), 100),
                 },
-        };
-    });
+            };
+        })
+        .filter(Boolean);
 }
 
 return parsed;
