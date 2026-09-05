@@ -32,13 +32,9 @@ export default function WebsitePreview({
       return [];
     }
 
-    return markers.filter(
-      (marker) =>
-        marker &&
-        marker.position &&
-        Number.isFinite(Number(marker.position.x)) &&
-        Number.isFinite(Number(marker.position.y))
-    );
+    return markers
+      .map(normalizeMarker)
+      .filter(Boolean);
   }, [markers]);
 
   return (
@@ -183,7 +179,7 @@ function RealScreenshot({
 }) {
   return (
     <div className="flex max-h-[760px] justify-center overflow-auto bg-secondary/20 p-2 sm:p-4">
-      <div className="relative inline-block max-w-full">
+      <div className="relative inline-block h-fit max-w-full">
         <img
           src={imageUrl}
           alt="Uploaded website design"
@@ -292,6 +288,39 @@ function getSeverityColor(severity) {
     default:
       return '#0ea5e9';
   }
+}
+
+function normalizeMarker(marker) {
+  if (!marker?.position) {
+    return null;
+  }
+
+  const x = parsePosition(
+    marker.position.x ?? marker.position.left
+  );
+  const y = parsePosition(
+    marker.position.y ?? marker.position.top
+  );
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return null;
+  }
+
+  return {
+    ...marker,
+    position: {
+      x: clamp(x, 0, 100),
+      y: clamp(y, 0, 100),
+    },
+  };
+}
+
+function parsePosition(value) {
+  if (typeof value === 'string') {
+    return Number(value.trim().replace('%', ''));
+  }
+
+  return Number(value);
 }
 
 function clamp(value, min, max) {
